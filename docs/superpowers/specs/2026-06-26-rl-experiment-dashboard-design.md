@@ -225,6 +225,13 @@ The dashboard should infer lineage when possible:
 - If git metadata and timestamps suggest a likely parent, show it as a suggestion, not as a confirmed link.
 - Always allow manual correction.
 
+Lineage creation should be an explicit workflow, not only an inferred background detail:
+
+1. When a run is indexed, the system creates a confirmed edge only from high-confidence evidence such as `load_run`, `resume_run`, or a concrete checkpoint path in saved params.
+2. When a user reviews experiments, the dashboard exposes a manual link form to connect parent and child runs, choose the relationship type, record the parent checkpoint, and write the intended change.
+3. When a future "start from this run" workflow exists, the dashboard should pre-fill parent run, checkpoint, git commit, and intended-change notes before launching or documenting the child run.
+4. Suggested lineage links should remain unconfirmed until the user accepts them, so speculative timestamp/git heuristics do not pollute the experiment story.
+
 Lineage should make it possible to answer:
 
 - Which run did this one come from?
