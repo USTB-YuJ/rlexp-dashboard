@@ -454,9 +454,11 @@
               </table>`;
         projectConfigs.innerHTML = `
           ${projectForm(projects[0] || {})}
+          ${projectIndexForm(projects[0] || {})}
           ${projectRows}
         `;
         bindProjectForm();
+        bindProjectIndexForm();
       }
 
       function projectForm(project) {
@@ -520,6 +522,46 @@
         await loadProjectConfigs();
         await loadRuns();
         await loadRemoteSources();
+      }
+
+      function projectIndexForm(project) {
+        return `
+          <h3 class="subhead">Index Project Logs</h3>
+          <form id="project-index-form">
+            <div class="form-row">
+              <label>
+                <div class="label">Project name</div>
+                <input name="project" value="${escapeHtml(project.name || '')}" required />
+              </label>
+              <label>
+                <div class="label">Log root</div>
+                <input name="log_root" value="${escapeHtml(project.local_cache_root || '')}" />
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit">Index Logs</button>
+            </div>
+          </form>
+        `;
+      }
+
+      function bindProjectIndexForm() {
+        const form = document.getElementById('project-index-form');
+        if (!form) return;
+        form.addEventListener('submit', indexProjectLogs);
+      }
+
+      async function indexProjectLogs(event) {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        await postJson('/api/index-project', {
+          project: form.get('project'),
+          log_root: form.get('log_root'),
+        });
+        await loadProjectConfigs();
+        await loadRuns();
+        await loadLineageOverview();
+        await loadTimeline();
       }
 
       async function loadRemoteSources() {

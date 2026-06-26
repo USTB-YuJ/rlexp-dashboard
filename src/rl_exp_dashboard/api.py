@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from .config_diff import diff_configs
+from .indexer import LocalRunIndexer
 from .models import LineageEdge
 from .storage import DashboardStore
 from .sync import RemoteSource
@@ -30,6 +31,52 @@ def runs_payload(store: DashboardStore, project: str | None = None) -> Dict[str,
             _run_table_row(store, run, projects_by_name.get(run["project_name"]))
             for run in store.list_runs(project)
         ]
+    }
+
+
+def index_project_payload(
+    store: DashboardStore,
+    payload: Dict[str, Any],
+    metric_reader: Any = None,
+    metric_series_reader: Any = None,
+) -> Dict[str, Any]:
+    project_name = str(payload.get("project") or payload.get("project_name") or "").strip()
+    if not project_name:
+        raise ValueError("Project name is required.")
+
+    log_root_value = payload.get("log_root") or payload.get("local_cache_root")
+    if log_root_value:
+        log_root = Path(str(log_root_value)).expanduser()
+    else:
+        project = store.get_project(project_name)
+        if project is None:
+            raise ValueError(f"Project `{project_name}` has not been created and log_root was not provided.")
+        log_root = Path(project["local_cache_root"]).expanduser()
+
+    store.upsert_project(project_name, local_cache_root=log_root)
+    runs = LocalRunIndexer(
+        log_root,
+        metric_reader=metric_reader,
+        metric_series_reader=metric_series_reader,
+    ).discover_runs()
+    for run in runs:
+        store.upsert_run(project_name, run)
+        if run.parent_run_id:
+            store.upsert_lineage(
+                LineageEdge(
+                    parent_run_id=run.parent_run_id,
+                    child_run_id=run.run_id,
+                    relationship="resume",
+                    parent_checkpoint=run.parent_checkpoint,
+                    intended_change="Inferred from indexed resume/load_run parameters.",
+                )
+            )
+
+    return {
+        "project": project_name,
+        "log_root": str(log_root),
+        "indexed_run_count": len(runs),
+        "run_ids": [run.run_id for run in runs],
     }
 
 
@@ -420,6 +467,13 @@ def create_app(db_path: Path):
     @app.get("/api/runs")
     def list_runs(project: str | None = None):
         return runs_payload(store, project)
+
+    @app.post("/api/index-project")
+    async def index_project(payload: dict):
+        try:
+            return index_project_payload(store, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/projects")
     def list_projects():

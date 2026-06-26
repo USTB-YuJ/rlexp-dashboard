@@ -5,6 +5,7 @@ from pathlib import Path
 from rl_exp_dashboard.api import (
     artifact_file_path,
     compare_runs_payload,
+    index_project_payload,
     lineage_overview_payload,
     metric_series_payload,
     metric_summaries_payload,
@@ -473,6 +474,36 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(project["preferred_metrics"], ["Train/mean_reward", "Episode/length"])
         self.assertEqual(project["log_patterns"], ["logs/rsl_rl/*/*", "logs/other/*/*"])
         self.assertEqual(project["tag_schema"], ["good-flat", "bad-stairs"])
+
+    def test_index_project_payload_discovers_runs_and_persists_lineage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            log_root = tmp_path / "logs" / "rsl_rl"
+            parent = log_root / "group" / "baseline"
+            child = log_root / "group" / "child"
+            (parent / "params").mkdir(parents=True)
+            (child / "params").mkdir(parents=True)
+            (parent / "params" / "agent.yaml").write_text("agent:\n  seed: 1\n", encoding="utf-8")
+            (child / "params" / "agent.yaml").write_text(
+                "agent:\n  runner:\n    resume: true\n    load_run: baseline\n    load_checkpoint: model_100.pt\n",
+                encoding="utf-8",
+            )
+            (child / "model_20.pt").write_bytes(b"checkpoint")
+            store = DashboardStore(tmp_path / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project("project", log_root)
+
+            payload = index_project_payload(store, {"project": "project"})
+
+            runs = runs_payload(store, "project")
+            lineage = lineage_overview_payload(store, "project")
+
+        self.assertEqual(payload["project"], "project")
+        self.assertEqual(payload["log_root"], str(log_root))
+        self.assertEqual(payload["indexed_run_count"], 2)
+        self.assertEqual({run["run_id"] for run in runs["runs"]}, {"group/baseline", "group/child"})
+        self.assertEqual(lineage["edges"][0]["parent_run_id"], "group/baseline")
+        self.assertEqual(lineage["edges"][0]["parent_checkpoint"], "model_100.pt")
 
     def _store_with_parent_and_child(self, tmp_path: Path) -> DashboardStore:
         store = DashboardStore(tmp_path / "dashboard.sqlite3")
