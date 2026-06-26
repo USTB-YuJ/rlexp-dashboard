@@ -11,6 +11,7 @@ from rl_exp_dashboard.api import (
     metric_summaries_payload,
     projects_payload,
     remote_sources_payload,
+    run_report_markdown,
     run_detail_payload,
     runs_payload,
     save_checkpoint_review_payload,
@@ -278,6 +279,40 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(groups["algorithm"]["diffs"][0]["before"], 0.01)
         self.assertEqual(groups["algorithm"]["diffs"][0]["after"], 0.005)
         self.assertEqual(deltas["Train/mean_reward"]["delta_last_value"], 1.0)
+
+    def test_run_report_markdown_summarizes_lineage_metrics_and_reviews(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+            store.upsert_run_observation(
+                run_id="group/child",
+                verdict="mixed",
+                summary="Good flat gait but still weak on stairs.",
+                tags=["good-flat", "bad-stairs"],
+                recommended_checkpoint="model_20.pt",
+            )
+            store.upsert_checkpoint_review(
+                run_id="group/child",
+                checkpoint="model_20.pt",
+                status="mixed",
+                notes="Stable forward walking, occasional stair stumble.",
+                tags=["candidate"],
+                score=0.72,
+                recommended=True,
+            )
+
+            markdown = run_report_markdown(store, "group/child")
+
+        self.assertIn("# Experiment Report: group/child", markdown)
+        self.assertIn("- Task: Unitree-G1-Depth-Parkour", markdown)
+        self.assertIn("- Algorithm: rsl_rl_ppo", markdown)
+        self.assertIn("- Parent: group/parent", markdown)
+        self.assertIn("- Parent checkpoint: model_10.pt", markdown)
+        self.assertIn("- Intended change: lower entropy", markdown)
+        self.assertIn("| Train/mean_reward | 2.0 | 10 |", markdown)
+        self.assertIn("- Verdict: mixed", markdown)
+        self.assertIn("- Tags: bad-stairs, good-flat", markdown)
+        self.assertIn("| model_20.pt | mixed | 0.72 | yes | candidate |", markdown)
+        self.assertIn("Stable forward walking, occasional stair stumble.", markdown)
 
     def test_artifact_file_path_only_allows_indexed_run_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:

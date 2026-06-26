@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 from typing import Callable, List, Optional
 
-from .api import serve
+from .api import run_report_markdown, serve
 from .indexer import LocalRunIndexer
 from .models import MetricSummary, inferred_resume_lineage_edge
 from .project_config import ProjectConfig, load_project_config
@@ -27,6 +27,8 @@ def main(
         return 0
     if args.command == "sync":
         return _sync(args, runner=sync_runner)
+    if args.command == "report":
+        return _report(args)
     if args.command == "project":
         if args.project_command == "import":
             return _import_project(args)
@@ -68,6 +70,11 @@ def _build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument("--include-videos", action="store_true", help="Include play videos in sync plan.")
     sync_parser.add_argument("--include-checkpoints", action="store_true", help="Include model_*.pt checkpoints in sync plan.")
     sync_parser.add_argument("--dry-run", action="store_true", help="Preview command and do not execute.")
+
+    report_parser = subparsers.add_parser("report", help="Export a single run experiment report as Markdown.")
+    report_parser.add_argument("--db", required=True, type=Path, help="SQLite database path.")
+    report_parser.add_argument("--run-id", required=True, help="Run ID to export.")
+    report_parser.add_argument("--output", type=Path, help="Optional Markdown output file. Defaults to stdout.")
 
     return parser
 
@@ -151,6 +158,19 @@ def _sync(args: argparse.Namespace, runner: Optional[SyncRunner] = None) -> int:
     )
     print(f"Sync {result.status}: {message}".rstrip())
     return 0 if result.status == "completed" else result.return_code
+
+
+def _report(args: argparse.Namespace) -> int:
+    store = DashboardStore(args.db)
+    store.initialize()
+    markdown = run_report_markdown(store, args.run_id)
+    if args.output is None:
+        print(markdown, end="")
+        return 0
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(markdown, encoding="utf-8")
+    print(f"Wrote report to {args.output}")
+    return 0
 
 
 def _resolve_log_root(store: DashboardStore, project_name: str, explicit_log_root: Optional[Path]) -> Path:

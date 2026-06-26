@@ -784,6 +784,23 @@
 - [x] **Step 3: Expose event files in run detail payload and render a TensorBoard Event Files panel near metric charts.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 53: Single Run Markdown Experiment Report
+
+**Files:**
+- Create: `src/rl_exp_dashboard/report.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_cli.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for Markdown report generation, CLI export, and dashboard link hooks.**
+- [x] **Step 2: Implement a report renderer that summarizes run metadata, lineage, metrics, manual observations, and checkpoint reviews.**
+- [x] **Step 3: Expose the report through API, CLI, and run detail export link.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

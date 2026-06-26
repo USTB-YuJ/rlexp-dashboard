@@ -6,6 +6,7 @@ from typing import Any, Dict
 from .config_diff import diff_configs
 from .indexer import LocalRunIndexer
 from .models import LineageEdge, inferred_resume_lineage_edge
+from .report import render_run_report_markdown
 from .storage import DashboardStore
 from .sync import RemoteSource, build_sync_plan, execute_sync_plan
 
@@ -125,6 +126,10 @@ def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
         "observation": store.get_run_observation(run_id),
         "checkpoint_reviews": store.list_checkpoint_reviews(run_id),
     }
+
+
+def run_report_markdown(store: DashboardStore, run_id: str) -> str:
+    return render_run_report_markdown(run_detail_payload(store, run_id))
 
 
 def artifact_file_path(store: DashboardStore, run_id: str, path: str) -> Path:
@@ -657,7 +662,7 @@ def _metric_deltas(before_metrics: list[Dict[str, Any]], after_metrics: list[Dic
 def create_app(db_path: Path):
     try:
         from fastapi import FastAPI, HTTPException
-        from fastapi.responses import FileResponse
+        from fastapi.responses import FileResponse, PlainTextResponse
         from fastapi.staticfiles import StaticFiles
     except ModuleNotFoundError as exc:
         raise RuntimeError(
@@ -730,6 +735,10 @@ def create_app(db_path: Path):
     @app.get("/api/run-detail")
     def get_run_detail(run_id: str):
         return run_detail_payload(store, run_id)
+
+    @app.get("/api/run-report")
+    def get_run_report(run_id: str):
+        return PlainTextResponse(run_report_markdown(store, run_id), media_type="text/markdown")
 
     @app.get("/api/metrics")
     def list_metrics(run_id: str):

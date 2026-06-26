@@ -1399,6 +1399,11 @@
             ${field('Latest Checkpoint', run.latest_checkpoint || '')}
           </div>
 
+          <h3 class="subhead">Experiment Report</h3>
+          <div class="field">
+            <a href="${escapeHtml(reportFileUrl(run.run_id))}" target="_blank" rel="noreferrer">Open Markdown Report</a>
+          </div>
+
           <h3 class="subhead">Git Metadata</h3>
           ${gitPanel(run.git || {})}
 
@@ -1851,6 +1856,10 @@
 
       function artifactFileUrl(runId, artifact) {
         return `/api/artifact-file?run_id=${encodeURIComponent(runId)}&path=${encodeURIComponent(artifact.path)}`;
+      }
+
+      function reportFileUrl(runId) {
+        return `/api/run-report?run_id=${encodeURIComponent(runId)}`;
       }
 
       function observationPanel(runId, observation) {

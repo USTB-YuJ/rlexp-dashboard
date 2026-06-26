@@ -6,7 +6,7 @@ from io import StringIO
 from pathlib import Path
 
 from rl_exp_dashboard.cli import main
-from rl_exp_dashboard.models import MetricSummary
+from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
 from rl_exp_dashboard.sync import RemoteSource
 
@@ -351,6 +351,96 @@ class CliTests(unittest.TestCase):
         self.assertEqual(project["preferred_metrics"], ["Train/mean_reward"])
         self.assertEqual(sources[0]["name"], "x-server")
         self.assertIn("Imported project unitree_rl_mjlab", output.getvalue())
+
+    def test_report_command_writes_single_run_markdown_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            db_path = tmp_path / "dashboard.sqlite3"
+            output_path = tmp_path / "child_report.md"
+            store = DashboardStore(db_path)
+            store.initialize()
+            store.upsert_project("project", tmp_path / "cache")
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/parent",
+                    name="parent",
+                    group="group",
+                    path=tmp_path / "parent",
+                    modified_time=1.0,
+                ),
+            )
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/child",
+                    name="child",
+                    group="group",
+                    path=tmp_path / "child",
+                    modified_time=2.0,
+                    task_name="Unitree-G1-Depth-Parkour",
+                    checkpoints=[
+                        CheckpointRecord(
+                            path=tmp_path / "child" / "model_20.pt",
+                            iteration=20,
+                            size_bytes=128,
+                            modified_time=2.0,
+                            is_latest=True,
+                        )
+                    ],
+                    metric_summaries=[
+                        MetricSummary(
+                            tag="Train/mean_reward",
+                            first_step=0,
+                            last_step=20,
+                            first_value=1.0,
+                            last_value=3.0,
+                            min_value=1.0,
+                            max_value=3.0,
+                            count=2,
+                        )
+                    ],
+                ),
+            )
+            store.upsert_lineage(
+                LineageEdge(
+                    parent_run_id="group/parent",
+                    child_run_id="group/child",
+                    relationship="finetune",
+                    parent_checkpoint="model_10.pt",
+                    intended_change="lower entropy",
+                )
+            )
+            store.upsert_run_observation(
+                run_id="group/child",
+                verdict="good",
+                summary="Ready for play.",
+                tags=["candidate"],
+                recommended_checkpoint="model_20.pt",
+            )
+            output = StringIO()
+
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "report",
+                        "--db",
+                        str(db_path),
+                        "--run-id",
+                        "group/child",
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            markdown = output_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Wrote report", output.getvalue())
+        self.assertIn("# Experiment Report: group/child", markdown)
+        self.assertIn("- Parent: group/parent", markdown)
+        self.assertIn("| Train/mean_reward | 3.0 | 20 |", markdown)
+        self.assertIn("Ready for play.", markdown)
 
 
 if __name__ == "__main__":
