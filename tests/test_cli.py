@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -220,6 +221,57 @@ class CliTests(unittest.TestCase):
         self.assertEqual(status["status"], "completed")
         self.assertEqual(status["message"], "copied logs")
         self.assertIn("Sync completed", output.getvalue())
+
+    def test_project_import_command_persists_project_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            db_path = tmp_path / "dashboard.sqlite3"
+            config_path = tmp_path / "project.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "name": "unitree_rl_mjlab",
+                        "local_cache_root": str(tmp_path / "cache"),
+                        "parser_profile": "rsl_rl_tensorboard",
+                        "preferred_metrics": ["Train/mean_reward"],
+                        "log_patterns": ["logs/rsl_rl/*/*"],
+                        "tag_schema": ["good-flat"],
+                        "remote_sources": [
+                            {
+                                "name": "x-server",
+                                "host": "example.com",
+                                "user": "eai",
+                                "port": 12188,
+                                "remote_log_root": "/remote/logs/rsl_rl",
+                                "method": "rsync",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            output = StringIO()
+
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "project",
+                        "import",
+                        "--config",
+                        str(config_path),
+                        "--db",
+                        str(db_path),
+                    ]
+                )
+
+            store = DashboardStore(db_path)
+            project = store.get_project("unitree_rl_mjlab")
+            sources = store.list_remote_sources("unitree_rl_mjlab")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(project["preferred_metrics"], ["Train/mean_reward"])
+        self.assertEqual(sources[0]["name"], "x-server")
+        self.assertIn("Imported project unitree_rl_mjlab", output.getvalue())
 
 
 if __name__ == "__main__":

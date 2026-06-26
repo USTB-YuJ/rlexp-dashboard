@@ -7,6 +7,7 @@ from typing import Callable, List, Optional
 from .api import serve
 from .indexer import LocalRunIndexer
 from .models import LineageEdge, MetricSummary
+from .project_config import ProjectConfig, load_project_config
 from .storage import DashboardStore
 from .sync import RemoteSource, SyncRunner, build_sync_plan, execute_sync_plan
 
@@ -26,6 +27,9 @@ def main(
         return 0
     if args.command == "sync":
         return _sync(args, runner=sync_runner)
+    if args.command == "project":
+        if args.project_command == "import":
+            return _import_project(args)
 
     parser.print_help()
     return 1
@@ -44,6 +48,12 @@ def _build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--workspace", default="~/rl-exp-dashboard", help="Workspace directory.")
     serve_parser.add_argument("--host", default="127.0.0.1", help="Bind host.")
     serve_parser.add_argument("--port", default=7860, type=int, help="Bind port.")
+
+    project_parser = subparsers.add_parser("project", help="Manage dashboard project configuration.")
+    project_subparsers = project_parser.add_subparsers(dest="project_command")
+    project_import = project_subparsers.add_parser("import", help="Import a project config file.")
+    project_import.add_argument("--config", required=True, type=Path, help="Project config file.")
+    project_import.add_argument("--db", required=True, type=Path, help="SQLite database path.")
 
     sync_parser = subparsers.add_parser("sync", help="Preview or run a remote log sync.")
     sync_parser.add_argument("--project", required=True, help="Project name.")
@@ -85,6 +95,28 @@ def _index(
 
     print(f"Indexed {len(runs)} runs into {args.db}")
     return 0
+
+
+def _import_project(args: argparse.Namespace) -> int:
+    config = load_project_config(args.config)
+    store = DashboardStore(args.db)
+    store.initialize()
+    _persist_project_config(store, config)
+    print(f"Imported project {config.name} into {args.db}")
+    return 0
+
+
+def _persist_project_config(store: DashboardStore, config: ProjectConfig) -> None:
+    store.upsert_project(
+        config.name,
+        config.local_cache_root,
+        parser_profile=config.parser_profile,
+        preferred_metrics=list(config.preferred_metrics),
+        log_patterns=list(config.log_patterns),
+        tag_schema=list(config.tag_schema),
+    )
+    for source in config.remote_sources:
+        store.upsert_remote_source(source)
 
 
 def _sync(args: argparse.Namespace, runner: Optional[SyncRunner] = None) -> int:

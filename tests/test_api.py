@@ -8,6 +8,7 @@ from rl_exp_dashboard.api import (
     lineage_overview_payload,
     metric_series_payload,
     metric_summaries_payload,
+    projects_payload,
     remote_sources_payload,
     run_detail_payload,
     save_checkpoint_review_payload,
@@ -227,6 +228,25 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["sources"][0]["name"], "x-server")
         self.assertEqual(payload["sources"][0]["latest_sync"]["status"], "dry-run")
         self.assertEqual(payload["sources"][0]["latest_sync"]["command"], ["rsync", "--dry-run"])
+
+    def test_projects_payload_includes_project_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = DashboardStore(Path(tmp) / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project(
+                "project",
+                Path(tmp) / "cache",
+                parser_profile="rsl_rl_tensorboard",
+                preferred_metrics=["Train/mean_reward"],
+                log_patterns=["logs/rsl_rl/*/*"],
+                tag_schema=["good-flat"],
+            )
+
+            payload = projects_payload(store)
+
+        self.assertEqual(payload["projects"][0]["name"], "project")
+        self.assertEqual(payload["projects"][0]["parser_profile"], "rsl_rl_tensorboard")
+        self.assertEqual(payload["projects"][0]["preferred_metrics"], ["Train/mean_reward"])
 
     def _store_with_parent_and_child(self, tmp_path: Path) -> DashboardStore:
         store = DashboardStore(tmp_path / "dashboard.sqlite3")

@@ -21,7 +21,11 @@ class DashboardStore:
                 """
                 create table if not exists projects (
                     name text primary key,
-                    local_cache_root text not null
+                    local_cache_root text not null,
+                    parser_profile text not null default 'generic_tensorboard',
+                    preferred_metrics_json text not null default '[]',
+                    log_patterns_json text not null default '[]',
+                    tag_schema_json text not null default '[]'
                 );
 
                 create table if not exists remote_sources (
@@ -141,18 +145,62 @@ class DashboardStore:
                 );
                 """
             )
+            _ensure_column(conn, "projects", "parser_profile", "text not null default 'generic_tensorboard'")
+            _ensure_column(conn, "projects", "preferred_metrics_json", "text not null default '[]'")
+            _ensure_column(conn, "projects", "log_patterns_json", "text not null default '[]'")
+            _ensure_column(conn, "projects", "tag_schema_json", "text not null default '[]'")
             _ensure_column(conn, "runs", "git_json", "text not null default '{}'")
 
-    def upsert_project(self, name: str, local_cache_root: Path) -> None:
+    def upsert_project(
+        self,
+        name: str,
+        local_cache_root: Path,
+        parser_profile: Optional[str] = None,
+        preferred_metrics: Optional[List[str]] = None,
+        log_patterns: Optional[List[str]] = None,
+        tag_schema: Optional[List[str]] = None,
+    ) -> None:
+        existing = self.get_project(name)
+        parser_profile = parser_profile or (existing or {}).get("parser_profile", "generic_tensorboard")
+        preferred_metrics = preferred_metrics if preferred_metrics is not None else (existing or {}).get("preferred_metrics", [])
+        log_patterns = log_patterns if log_patterns is not None else (existing or {}).get("log_patterns", [])
+        tag_schema = tag_schema if tag_schema is not None else (existing or {}).get("tag_schema", [])
         with self._connect() as conn:
             conn.execute(
                 """
-                insert into projects (name, local_cache_root)
-                values (?, ?)
-                on conflict(name) do update set local_cache_root=excluded.local_cache_root
+                insert into projects (
+                    name, local_cache_root, parser_profile, preferred_metrics_json,
+                    log_patterns_json, tag_schema_json
+                )
+                values (?, ?, ?, ?, ?, ?)
+                on conflict(name) do update set
+                    local_cache_root=excluded.local_cache_root,
+                    parser_profile=excluded.parser_profile,
+                    preferred_metrics_json=excluded.preferred_metrics_json,
+                    log_patterns_json=excluded.log_patterns_json,
+                    tag_schema_json=excluded.tag_schema_json
                 """,
-                (name, str(local_cache_root)),
+                (
+                    name,
+                    str(local_cache_root),
+                    parser_profile,
+                    json.dumps(preferred_metrics or []),
+                    json.dumps(log_patterns or []),
+                    json.dumps(tag_schema or []),
+                ),
             )
+
+    def list_projects(self) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute("select * from projects order by name").fetchall()
+        return [self._project_row_to_dict(row) for row in rows]
+
+    def get_project(self, name: str) -> Optional[Dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute("select * from projects where name = ?", (name,)).fetchone()
+        if row is None:
+            return None
+        return self._project_row_to_dict(row)
 
     def upsert_remote_source(self, source: RemoteSource) -> None:
         with self._connect() as conn:
@@ -660,6 +708,16 @@ class DashboardStore:
             "latest_checkpoint": row["latest_checkpoint"],
             "parent_run_id": row["parent_run_id"],
             "parent_checkpoint": row["parent_checkpoint"],
+        }
+
+    def _project_row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
+        return {
+            "name": row["name"],
+            "local_cache_root": row["local_cache_root"],
+            "parser_profile": row["parser_profile"],
+            "preferred_metrics": json.loads(row["preferred_metrics_json"]),
+            "log_patterns": json.loads(row["log_patterns_json"]),
+            "tag_schema": json.loads(row["tag_schema_json"]),
         }
 
     def _lineage_row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:

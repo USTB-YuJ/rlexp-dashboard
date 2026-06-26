@@ -71,6 +71,10 @@ def remote_sources_payload(store: DashboardStore, project: str | None = None) ->
     return {"sources": sources}
 
 
+def projects_payload(store: DashboardStore) -> Dict[str, Any]:
+    return {"projects": store.list_projects()}
+
+
 def lineage_overview_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
     nodes = [
         {
@@ -161,6 +165,10 @@ def create_app(db_path: Path):
     @app.get("/api/runs")
     def list_runs(project: str | None = None):
         return {"runs": store.list_runs(project)}
+
+    @app.get("/api/projects")
+    def list_projects():
+        return projects_payload(store)
 
     @app.get("/api/remote-sources")
     def list_remote_sources(project: str | None = None):

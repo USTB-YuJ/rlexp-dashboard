@@ -207,6 +207,29 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(status["command"], ["rsync", "--dry-run"])
         self.assertEqual(status["message"], "preview only")
 
+    def test_store_persists_project_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "dashboard.sqlite3"
+            store = DashboardStore(db_path)
+            store.initialize()
+
+            store.upsert_project(
+                "unitree_rl_mjlab",
+                Path(tmp) / "cache",
+                parser_profile="rsl_rl_tensorboard",
+                preferred_metrics=["Train/mean_reward", "Episode_Termination/fell_over"],
+                log_patterns=["logs/rsl_rl/*/*"],
+                tag_schema=["good-flat", "bad-stairs"],
+            )
+            projects = store.list_projects()
+            project = store.get_project("unitree_rl_mjlab")
+
+        self.assertEqual(projects[0]["name"], "unitree_rl_mjlab")
+        self.assertEqual(project["parser_profile"], "rsl_rl_tensorboard")
+        self.assertEqual(project["preferred_metrics"], ["Train/mean_reward", "Episode_Termination/fell_over"])
+        self.assertEqual(project["log_patterns"], ["logs/rsl_rl/*/*"])
+        self.assertEqual(project["tag_schema"], ["good-flat", "bad-stairs"])
+
     def test_store_persists_run_observations_and_checkpoint_reviews(self):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = Path(tmp) / "dashboard.sqlite3"

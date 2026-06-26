@@ -330,6 +330,25 @@
 - [x] **Step 3: Load lineage overview on page load and expose a refresh control.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 22: Project Config Import
+
+**Files:**
+- Create: `src/rl_exp_dashboard/project_config.py`
+- Create: `tests/test_project_config.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_cli.py`
+- Modify: `tests/test_api.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for loading a project config file and importing project/remote source/preferred metric metadata.**
+- [x] **Step 2: Add project config parsing using existing structured config loading.**
+- [x] **Step 3: Extend project storage and API payloads with parser profile, log patterns, tag schema, and preferred metrics.**
+- [x] **Step 4: Add `project import --config ... --db ...` CLI command.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
