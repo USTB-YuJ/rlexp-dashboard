@@ -880,6 +880,18 @@
 - [x] **Step 3: Render human verdict comparison in the bundled compare UI.**
 - [x] **Step 4: Run targeted and full verification.**
 
+## Task 60: Lineage Edge Compare Interaction
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for clickable lineage graph edges.**
+- [x] **Step 2: Add parent/child run metadata and keyboard focus to lineage graph edges.**
+- [x] **Step 3: Wire edge activation to the existing compare panel.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

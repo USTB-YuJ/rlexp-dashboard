@@ -228,6 +228,15 @@
         stroke: #7d8da8;
         stroke-width: 1.6;
       }
+      .lineage-edge[role="button"] {
+        cursor: pointer;
+      }
+      .lineage-edge[role="button"]:hover,
+      .lineage-edge[role="button"]:focus {
+        stroke: var(--accent);
+        stroke-width: 2.4;
+        outline: none;
+      }
       .lineage-node {
         cursor: pointer;
       }
@@ -1015,7 +1024,7 @@
             const x2 = child.x;
             const y2 = child.y + nodeHeight / 2;
             const mid = Math.max(24, (x2 - x1) / 2);
-            return `<path class="lineage-edge" d="M ${x1} ${y1} C ${x1 + mid} ${y1}, ${x2 - mid} ${y2}, ${x2} ${y2}" marker-end="url(#lineage-arrow)"></path>`;
+            return `<path class="lineage-edge" data-parent-run-id="${escapeHtml(edge.parent_run_id)}" data-child-run-id="${escapeHtml(edge.child_run_id)}" role="button" tabindex="0" aria-label="Compare ${escapeHtml(edge.parent_run_id)} to ${escapeHtml(edge.child_run_id)}" d="M ${x1} ${y1} C ${x1 + mid} ${y1}, ${x2 - mid} ${y2}, ${x2} ${y2}" marker-end="url(#lineage-arrow)"></path>`;
           })
           .join('');
         const nodeGroups = nodes
@@ -1047,6 +1056,15 @@
       }
 
       function bindLineageGraph() {
+        for (const edge of lineageOverview.querySelectorAll('#lineage-graph [data-parent-run-id][data-child-run-id]')) {
+          edge.addEventListener('click', () => activateLineageEdgeCompare(edge.dataset.parentRunId, edge.dataset.childRunId));
+          edge.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              activateLineageEdgeCompare(edge.dataset.parentRunId, edge.dataset.childRunId);
+            }
+          });
+        }
         for (const node of lineageOverview.querySelectorAll('#lineage-graph [data-run-id]')) {
           node.addEventListener('click', () => loadRunDetail(node.dataset.runId));
           node.addEventListener('keydown', (event) => {
@@ -1056,6 +1074,12 @@
             }
           });
         }
+      }
+
+      async function activateLineageEdgeCompare(parentRunId, childRunId) {
+        compareBeforeRun.value = parentRunId;
+        compareAfterRun.value = childRunId;
+        await loadCompareResult();
       }
 
       function shortRunLabel(runId) {
