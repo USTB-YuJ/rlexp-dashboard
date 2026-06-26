@@ -43,6 +43,8 @@ class DashboardStoreTests(unittest.TestCase):
                     group="group",
                     path=run_path,
                     modified_time=2.0,
+                    task_name="Unitree-G1-Depth-Parkour",
+                    algorithm_name="rsl_rl_ppo",
                     params={"agent": {"algorithm": {"entropy_coef": 0.005}}},
                     git_metadata={
                         "commit": "abc123",
@@ -106,6 +108,8 @@ class DashboardStoreTests(unittest.TestCase):
             lineage = store.list_lineage("group/child")
 
         self.assertEqual(child["latest_checkpoint"], "model_100.pt")
+        self.assertEqual(child["task_name"], "Unitree-G1-Depth-Parkour")
+        self.assertEqual(child["algorithm_name"], "rsl_rl_ppo")
         self.assertEqual(child["params"]["agent"]["algorithm"]["entropy_coef"], 0.005)
         self.assertEqual(child["git"]["commit"], "abc123")
         self.assertEqual(child["git"]["branch"], "rl-dashboard")

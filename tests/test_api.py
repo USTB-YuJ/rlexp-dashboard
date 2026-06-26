@@ -92,6 +92,8 @@ class ApiPayloadTests(unittest.TestCase):
         by_run_id = {run["run_id"]: run for run in payload["runs"]}
         child = by_run_id["group/child"]
         parent = by_run_id["group/parent"]
+        self.assertEqual(child["task_name"], "Unitree-G1-Depth-Parkour")
+        self.assertEqual(child["algorithm_name"], "rsl_rl_ppo")
         self.assertEqual(child["review_verdict"], "mixed")
         self.assertEqual(child["recommended_checkpoint"], "model_20.pt")
         self.assertEqual(child["has_observation"], True)
@@ -593,6 +595,8 @@ class ApiPayloadTests(unittest.TestCase):
                 group="group",
                 path=tmp_path / "child",
                 modified_time=2.0,
+                task_name="Unitree-G1-Depth-Parkour",
+                algorithm_name="rsl_rl_ppo",
                 params={"agent": {"algorithm": {"entropy_coef": 0.005}}},
                 checkpoints=[
                     CheckpointRecord(

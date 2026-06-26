@@ -279,6 +279,8 @@
             <tr>
               <th>Run</th>
               <th>Project</th>
+              <th>Task</th>
+              <th>Algorithm</th>
               <th>Reward</th>
               <th>Review</th>
               <th>Lineage</th>
@@ -289,7 +291,7 @@
           </thead>
           <tbody id="run-table-body">
             <tr>
-              <td colspan="8" class="empty">Loading runs...</td>
+              <td colspan="10" class="empty">Loading runs...</td>
             </tr>
           </tbody>
         </table>
@@ -407,7 +409,7 @@
       runSort.addEventListener('change', renderFilteredRuns);
 
       async function loadRuns() {
-        runTableBody.innerHTML = `<tr><td colspan="8" class="empty">Loading runs...</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="10" class="empty">Loading runs...</td></tr>`;
         const response = await fetch('/api/runs');
         const payload = await response.json();
         renderRuns(payload.runs || []);
@@ -984,6 +986,8 @@
             run.run_id,
             run.project_name,
             run.group,
+            run.task_name,
+            run.algorithm_name,
             run.latest_checkpoint,
             run.review_verdict,
             run.recommended_checkpoint,
@@ -1002,7 +1006,7 @@
         });
         runs = sortRuns(runs, runSort.value);
         if (runs.length === 0) {
-          runTableBody.innerHTML = `<tr><td colspan="8" class="empty">No runs match the current filters.</td></tr>`;
+          runTableBody.innerHTML = `<tr><td colspan="10" class="empty">No runs match the current filters.</td></tr>`;
           return;
         }
         runTableBody.innerHTML = runs
@@ -1011,6 +1015,8 @@
               <tr data-run-id="${escapeHtml(run.run_id)}">
                 <td>${escapeHtml(run.run_id)}</td>
                 <td>${escapeHtml(run.project_name || '')}</td>
+                <td>${escapeHtml(run.task_name || '')}</td>
+                <td>${escapeHtml(run.algorithm_name || '')}</td>
                 <td>${formatNumber(keyMetricValue(run, 'Train/mean_reward'))}</td>
                 <td>${escapeHtml(formatRunReview(run))}</td>
                 <td>${escapeHtml(formatRunLineage(run))}</td>
@@ -1125,6 +1131,8 @@
           <div class="grid">
             ${field('Run ID', run.run_id)}
             ${field('Group', run.group)}
+            ${field('Task Name', run.task_name || '')}
+            ${field('Algorithm Name', run.algorithm_name || '')}
             ${field('Path', run.path)}
             ${field('Latest Checkpoint', run.latest_checkpoint || '')}
           </div>
@@ -1705,7 +1713,7 @@
       }
 
       loadRuns().catch((error) => {
-        runTableBody.innerHTML = `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="10" class="empty">${escapeHtml(error.message)}</td></tr>`;
       });
       loadProjectConfigs().catch((error) => {
         projectConfigs.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;

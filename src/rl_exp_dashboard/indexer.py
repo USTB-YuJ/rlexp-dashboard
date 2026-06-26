@@ -16,6 +16,9 @@ _PARAM_SUFFIXES = {".yaml", ".yml", ".json", ".toml"}
 _PARENT_RUN_KEYS = {"load_run", "resume_run", "parent_run", "parent_run_id"}
 _PARENT_CHECKPOINT_KEYS = {"load_checkpoint", "resume_checkpoint", "parent_checkpoint"}
 _GIT_CONTAINER_KEYS = {"git", "git_info", "git_metadata"}
+_TASK_NAME_KEYS = {"task", "task_name", "task_id", "env_name"}
+_ALGORITHM_NAME_KEYS = {"algorithm", "algorithm_name", "algo", "algo_name"}
+_NAME_KEYS = {"name", "id", "class_name"}
 
 
 class LocalRunIndexer:
@@ -62,6 +65,8 @@ class LocalRunIndexer:
         artifacts = self._find_files_by_suffix(run_dir, _ARTIFACT_SUFFIXES)
         parent_run_id, parent_checkpoint = _infer_parent(params, group)
         git_metadata = _extract_git_metadata(params)
+        task_name = _infer_named_metadata(params, _TASK_NAME_KEYS)
+        algorithm_name = _infer_named_metadata(params, _ALGORITHM_NAME_KEYS)
 
         return RunRecord(
             run_id=run_id,
@@ -69,6 +74,8 @@ class LocalRunIndexer:
             group=group,
             path=run_dir,
             modified_time=run_dir.stat().st_mtime,
+            task_name=task_name,
+            algorithm_name=algorithm_name,
             params=params,
             git_metadata=git_metadata,
             param_files=param_files,
@@ -202,6 +209,36 @@ def _extract_git_metadata(params: Dict[str, Any]) -> Dict[str, Any]:
     if diff is not None:
         metadata["diff"] = str(diff)
     return metadata
+
+
+def _infer_named_metadata(params: Dict[str, Any], keys: set[str]) -> str:
+    value = _find_named_value(params, keys)
+    return str(value).strip() if value is not None else ""
+
+
+def _find_named_value(value: Any, keys: set[str]) -> Any:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized_key = str(key).lower()
+            if normalized_key in keys:
+                if isinstance(child, dict):
+                    named_child = _find_nested_value(child, _NAME_KEYS)
+                    if named_child is not None:
+                        return named_child
+                else:
+                    normalized = _normalize_optional_string(child)
+                    if normalized is not None:
+                        return normalized
+        for child in value.values():
+            found = _find_named_value(child, keys)
+            if found is not None:
+                return found
+    elif isinstance(value, list):
+        for child in value:
+            found = _find_named_value(child, keys)
+            if found is not None:
+                return found
+    return None
 
 
 def _find_git_mapping(value: Any) -> Dict[str, Any] | None:

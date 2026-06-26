@@ -50,6 +50,8 @@ class RunRecord:
     group: str
     path: Path
     modified_time: float
+    task_name: str = ""
+    algorithm_name: str = ""
     params: Dict[str, Any] = field(default_factory=dict)
     git_metadata: Dict[str, Any] = field(default_factory=dict)
     param_files: List[Path] = field(default_factory=list)

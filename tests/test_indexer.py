@@ -66,11 +66,11 @@ class LocalRunIndexerTests(unittest.TestCase):
             params_dir.mkdir(parents=True)
             videos_dir.mkdir(parents=True)
             (params_dir / "env.yaml").write_text(
-                "env:\n  scene:\n    num_envs: 2048\n  rewards:\n    alive:\n      weight: 1.0\n",
+                "env:\n  task:\n    name: Unitree-G1-Depth-Parkour\n  scene:\n    num_envs: 2048\n  rewards:\n    alive:\n      weight: 1.0\n",
                 encoding="utf-8",
             )
             (params_dir / "agent.yaml").write_text(
-                "agent:\n  algorithm:\n    entropy_coef: 0.005\n",
+                "agent:\n  algorithm:\n    name: rsl_rl_ppo\n    entropy_coef: 0.005\n",
                 encoding="utf-8",
             )
             (params_dir / "runner.toml").write_text(
@@ -89,6 +89,8 @@ class LocalRunIndexerTests(unittest.TestCase):
         self.assertEqual(run.run_id, "g1_depth_parkour_amp/2026-06-25_15-19-19")
         self.assertEqual(run.group, "g1_depth_parkour_amp")
         self.assertEqual(run.name, "2026-06-25_15-19-19")
+        self.assertEqual(run.task_name, "Unitree-G1-Depth-Parkour")
+        self.assertEqual(run.algorithm_name, "rsl_rl_ppo")
         self.assertEqual(run.params["env"]["scene"]["num_envs"], 2048)
         self.assertEqual(run.params["agent"]["algorithm"]["entropy_coef"], 0.005)
         self.assertEqual(run.params["runner"]["experiment_name"], "parkour")
