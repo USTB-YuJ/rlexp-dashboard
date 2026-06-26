@@ -258,6 +258,26 @@
         stroke: var(--accent);
         stroke-width: 1.4;
       }
+      .lineage-node-verdict-good rect {
+        fill: #ecfdf3;
+        stroke: #147d44;
+      }
+      .lineage-node-verdict-mixed rect {
+        fill: #fff8df;
+        stroke: #9a6b00;
+      }
+      .lineage-node-verdict-bad rect {
+        fill: #fff0f0;
+        stroke: #bf2f3c;
+      }
+      .lineage-node-verdict-exported rect {
+        fill: #f3efff;
+        stroke: #6554c0;
+      }
+      .lineage-node-verdict-unreviewed rect {
+        fill: #ffffff;
+        stroke: #7d8da8;
+      }
       .lineage-node:hover rect,
       .lineage-node:focus rect {
         fill: var(--accent-soft);
@@ -1045,7 +1065,7 @@
             const pos = positions.get(node.run_id);
             if (!pos) return '';
             return `
-              <g class="lineage-node" data-run-id="${escapeHtml(node.run_id)}" role="button" tabindex="0" transform="translate(${pos.x}, ${pos.y})">
+              <g class="${escapeHtml(lineageNodeClass(node))}" data-run-id="${escapeHtml(node.run_id)}" role="button" tabindex="0" transform="translate(${pos.x}, ${pos.y})">
                 <rect width="${nodeWidth}" height="${nodeHeight}" rx="6"></rect>
                 <text class="lineage-node-title" x="10" y="18">${escapeHtml(shortRunLabel(node.run_id))}</text>
                 <text class="lineage-node-meta" x="10" y="34">${escapeHtml(lineageNodeMeta(node))}</text>
@@ -1101,8 +1121,16 @@
         return `${text.slice(0, 13)}...${text.slice(-14)}`;
       }
 
+      function lineageNodeClass(node) {
+        const verdict = String(node.review_verdict || 'unreviewed').toLowerCase();
+        const allowed = ['good', 'mixed', 'bad', 'exported', 'unreviewed'];
+        const safeVerdict = allowed.includes(verdict) ? verdict : 'unreviewed';
+        return `lineage-node lineage-node-verdict-${safeVerdict}`;
+      }
+
       function lineageNodeMeta(node) {
-        return [node.project_name, node.latest_checkpoint].filter(Boolean).join(' | ');
+        const checkpoint = node.latest_checkpoint ? node.latest_checkpoint.split('/').pop() : '';
+        return [node.review_verdict || 'unreviewed', checkpoint || node.project_name].filter(Boolean).join(' | ');
       }
 
       function lineageLinkForm(nodes) {

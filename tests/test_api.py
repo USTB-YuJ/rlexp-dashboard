@@ -700,10 +700,21 @@ class ApiPayloadTests(unittest.TestCase):
     def test_lineage_overview_payload_returns_nodes_and_edges(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))
+            store.upsert_run_observation(
+                run_id="group/child",
+                verdict="bad",
+                summary="Sits down on stairs.",
+                tags=["termination"],
+            )
 
             payload = lineage_overview_payload(store, "project")
 
-        self.assertEqual({node["run_id"] for node in payload["nodes"]}, {"group/parent", "group/child"})
+        nodes_by_id = {node["run_id"]: node for node in payload["nodes"]}
+        self.assertEqual(set(nodes_by_id), {"group/parent", "group/child"})
+        self.assertEqual(nodes_by_id["group/child"]["review_verdict"], "bad")
+        self.assertEqual(nodes_by_id["group/child"]["review_summary"], "Sits down on stairs.")
+        self.assertEqual(nodes_by_id["group/child"]["review_tags"], ["termination"])
+        self.assertEqual(nodes_by_id["group/parent"]["review_verdict"], "unreviewed")
         self.assertEqual(payload["edges"][0]["parent_run_id"], "group/parent")
         self.assertEqual(payload["edges"][0]["child_run_id"], "group/child")
         self.assertEqual(payload["edges"][0]["relationship"], "finetune")

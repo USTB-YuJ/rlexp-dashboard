@@ -559,18 +559,23 @@ def save_project_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict
 
 
 def lineage_overview_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
-    nodes = [
-        {
-            "run_id": run["run_id"],
-            "project_name": run["project_name"],
-            "name": run["name"],
-            "group": run["group"],
-            "latest_checkpoint": run["latest_checkpoint"],
-            "modified_time": run["modified_time"],
-            "start_time": run.get("start_time", 0.0),
-        }
-        for run in store.list_runs(project)
-    ]
+    nodes = []
+    for run in store.list_runs(project):
+        observation = store.get_run_observation(run["run_id"]) or {}
+        nodes.append(
+            {
+                "run_id": run["run_id"],
+                "project_name": run["project_name"],
+                "name": run["name"],
+                "group": run["group"],
+                "latest_checkpoint": run["latest_checkpoint"],
+                "modified_time": run["modified_time"],
+                "start_time": run.get("start_time", 0.0),
+                "review_verdict": observation.get("verdict", "unreviewed"),
+                "review_summary": observation.get("summary", ""),
+                "review_tags": observation.get("tags", []),
+            }
+        )
     return {
         "project": project,
         "nodes": nodes,

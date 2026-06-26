@@ -920,6 +920,20 @@
 - [x] **Step 3: Render a side-by-side video comparison panel in the bundled compare UI.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 63: Lineage Verdict Node Styling
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for lineage review metadata and verdict styling hooks.**
+- [x] **Step 2: Add run observation verdict, summary, and tags to lineage nodes.**
+- [x] **Step 3: Render SVG lineage nodes with verdict-specific classes and colors.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
