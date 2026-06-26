@@ -518,7 +518,12 @@ class ApiPayloadTests(unittest.TestCase):
 
             payload = sync_remote_source_payload(
                 store,
-                {"project": "project", "source_name": "x-server", "dry_run": True},
+                {
+                    "project": "project",
+                    "source_name": "x-server",
+                    "dry_run": True,
+                    "include_checkpoints": True,
+                },
             )
             status = store.latest_sync_status("x-server", "project")
 
@@ -527,6 +532,7 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["project"], "project")
         self.assertIn("rsync", payload["command"])
         self.assertIn("--dry-run", payload["command"])
+        self.assertIn("--include=model_*.pt", payload["command"])
         self.assertEqual(status["status"], "dry-run")
         self.assertEqual(status["local_path"], str(cache_root / "x-server" / "project" / "logs" / "rsl_rl"))
 

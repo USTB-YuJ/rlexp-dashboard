@@ -66,6 +66,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument("--db", required=True, type=Path, help="SQLite database path.")
     sync_parser.add_argument("--method", choices=["rsync", "scp", "ssh-tar"], help="Sync method.")
     sync_parser.add_argument("--include-videos", action="store_true", help="Include play videos in sync plan.")
+    sync_parser.add_argument("--include-checkpoints", action="store_true", help="Include model_*.pt checkpoints in sync plan.")
     sync_parser.add_argument("--dry-run", action="store_true", help="Preview command and do not execute.")
 
     return parser
@@ -124,6 +125,7 @@ def _sync(args: argparse.Namespace, runner: Optional[SyncRunner] = None) -> int:
         cache_root=cache_root,
         dry_run=args.dry_run,
         include_videos=args.include_videos,
+        include_checkpoints=args.include_checkpoints,
     )
     print(" ".join(plan.command))
     if args.dry_run:

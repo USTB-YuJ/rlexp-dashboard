@@ -834,6 +834,15 @@
                 </select>
               </label>
             </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Include checkpoints</div>
+                <select name="include_checkpoints">
+                  ${option('false', 'false')}
+                  ${option('true', 'false')}
+                </select>
+              </label>
+            </div>
             <label>
               <input type="checkbox" name="dry_run" checked />
               Dry run
@@ -859,6 +868,7 @@
           source_name: form.get('source_name'),
           cache_root: form.get('cache_root'),
           include_videos: form.get('include_videos') === 'true',
+          include_checkpoints: form.get('include_checkpoints') === 'true',
           dry_run: form.get('dry_run') === 'on',
         });
         await loadRemoteSources();

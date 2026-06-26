@@ -25,7 +25,8 @@ class RemoteSyncPlanTests(unittest.TestCase):
         self.assertIn("ssh -p 12188", plan.command)
         self.assertIn("--include=params/***", plan.command)
         self.assertIn("--include=events.out.tfevents*", plan.command)
-        self.assertIn("--include=model_*.pt", plan.command)
+        self.assertNotIn("--include=model_*.pt", plan.command)
+        self.assertIn("--exclude=model_*.pt", plan.command)
         self.assertIn("--exclude=videos/***", plan.command)
         self.assertEqual(
             plan.command[-2:],
@@ -34,6 +35,23 @@ class RemoteSyncPlanTests(unittest.TestCase):
                 "/tmp/cache/x-server/unitree_rl_mjlab/logs/rsl_rl/",
             ],
         )
+
+    def test_build_rsync_plan_can_include_checkpoints_on_demand(self):
+        source = RemoteSource(
+            name="x-server",
+            host="example.com",
+            user="eai",
+            port=12188,
+            remote_log_root="/logs/rsl_rl",
+            project="project",
+            method="rsync",
+        )
+
+        plan = build_sync_plan(source, cache_root=Path("/tmp/cache"), include_checkpoints=True)
+
+        self.assertIn("--include=model_*.pt", plan.command)
+        self.assertNotIn("--exclude=model_*.pt", plan.command)
+        self.assertEqual(plan.include_checkpoints, True)
 
     def test_build_scp_plan_can_include_videos_on_demand(self):
         source = RemoteSource(

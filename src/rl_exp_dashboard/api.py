@@ -360,11 +360,13 @@ def sync_remote_source_payload(
     cache_root = Path(str(payload.get("cache_root") or project["local_cache_root"])).expanduser()
     dry_run = _payload_bool(payload.get("dry_run", True))
     include_videos = _payload_bool(payload.get("include_videos", False))
+    include_checkpoints = _payload_bool(payload.get("include_checkpoints", False))
     plan = build_sync_plan(
         source,
         cache_root=cache_root,
         dry_run=dry_run,
         include_videos=include_videos,
+        include_checkpoints=include_checkpoints,
     )
 
     if dry_run:

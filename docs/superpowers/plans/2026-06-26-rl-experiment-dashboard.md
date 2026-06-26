@@ -750,6 +750,24 @@
 - [x] **Step 3: Expose config files in run detail payload and render a Config Files panel before the params browser.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 51: Checkpoint Sync Opt-In
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/sync.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_sync.py`
+- Modify: `tests/test_cli.py`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests proving rsync defaults exclude checkpoints and CLI/API/UI expose an opt-in checkpoint sync flag.**
+- [x] **Step 2: Add `include_checkpoints` to sync plans and rsync include/exclude filters.**
+- [x] **Step 3: Wire `--include-checkpoints` through CLI, API payloads, and the bundled remote sync form.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

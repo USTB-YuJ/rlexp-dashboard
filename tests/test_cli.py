@@ -188,6 +188,7 @@ class CliTests(unittest.TestCase):
                         str(cache_root),
                         "--db",
                         str(db_path),
+                        "--include-checkpoints",
                         "--dry-run",
                     ]
                 )
@@ -199,6 +200,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn("rsync", output.getvalue())
         self.assertIn("--dry-run", output.getvalue())
+        self.assertIn("--include=model_*.pt", output.getvalue())
         self.assertEqual(sources[0]["name"], "x-server")
         self.assertEqual(status["status"], "dry-run")
         self.assertIn("--dry-run", status["command"])
