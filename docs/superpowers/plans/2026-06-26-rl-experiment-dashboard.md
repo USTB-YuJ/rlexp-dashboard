@@ -666,6 +666,19 @@
 - [x] **Step 3: Wire graph nodes to run detail loading and keep the existing edge table/manual link form.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 45: Dashboard Project Scope Control
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for a global project scope selector and scoped API calls.**
+- [x] **Step 2: Add a header-level project scope selector populated from `/api/projects`.**
+- [x] **Step 3: Apply the selected project to runs, remote sources, lineage, and timeline fetches.**
+- [x] **Step 4: Refresh scoped panels when the project scope changes and after project/index/sync actions.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

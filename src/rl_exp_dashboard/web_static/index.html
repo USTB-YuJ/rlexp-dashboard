@@ -29,6 +29,15 @@
         background: var(--panel);
         padding: 18px 28px;
       }
+      .header-row {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+      }
+      .project-scope-control {
+        min-width: 220px;
+      }
       h1 {
         font-size: 22px;
         margin: 0;
@@ -250,13 +259,30 @@
         .table-controls {
           grid-template-columns: 1fr;
         }
+        .header-row {
+          align-items: stretch;
+          flex-direction: column;
+        }
+        .project-scope-control {
+          min-width: 0;
+        }
       }
     </style>
   </head>
   <body>
     <header>
-      <h1>RL Experiment Dashboard</h1>
-      <div class="muted">Local run index, metric summaries, checkpoints, and lineage.</div>
+      <div class="header-row">
+        <div>
+          <h1>RL Experiment Dashboard</h1>
+          <div class="muted">Local run index, metric summaries, checkpoints, and lineage.</div>
+        </div>
+        <label class="project-scope-control">
+          <div class="label">Project scope</div>
+          <select id="project-scope">
+            <option value="">All projects</option>
+          </select>
+        </label>
+      </div>
     </header>
 
     <main>
@@ -414,6 +440,7 @@
       const runDetail = document.getElementById('run-detail');
       const selectedRun = document.getElementById('selected-run');
       const runSearch = document.getElementById('run-search');
+      const projectScope = document.getElementById('project-scope');
       const projectFilter = document.getElementById('project-filter');
       const groupFilter = document.getElementById('group-filter');
       const reviewFilter = document.getElementById('review-filter');
@@ -439,6 +466,7 @@
       document.getElementById('refresh-lineage').addEventListener('click', loadLineageOverview);
       document.getElementById('refresh-timeline').addEventListener('click', loadTimeline);
       document.getElementById('compare-runs').addEventListener('click', loadCompareResult);
+      projectScope.addEventListener('change', handleProjectScopeChange);
       runSearch.addEventListener('input', renderFilteredRuns);
       projectFilter.addEventListener('change', renderFilteredRuns);
       groupFilter.addEventListener('change', renderFilteredRuns);
@@ -448,7 +476,7 @@
 
       async function loadRuns() {
         runTableBody.innerHTML = `<tr><td colspan="11" class="empty">Loading runs...</td></tr>`;
-        const response = await fetch('/api/runs');
+        const response = await fetch(scopedUrl('/api/runs'));
         const payload = await response.json();
         renderRuns(payload.runs || []);
       }
@@ -457,7 +485,35 @@
         projectConfigs.innerHTML = `<div class="empty">Loading project configs...</div>`;
         const response = await fetch('/api/projects');
         const payload = await response.json();
+        populateProjectScope(payload.projects || []);
         renderProjectConfigs(payload.projects || []);
+      }
+
+      function populateProjectScope(projects) {
+        const selected = projectScope.value;
+        projectScope.innerHTML = `
+          <option value="">All projects</option>
+          ${projects.map((project) => option(project.name, selected)).join('')}
+        `;
+        if (selected && projects.some((project) => project.name === selected)) {
+          projectScope.value = selected;
+        } else {
+          projectScope.value = '';
+        }
+      }
+
+      async function handleProjectScopeChange() {
+        await loadRuns();
+        await loadRemoteSources();
+        await loadLineageOverview();
+        await loadTimeline();
+      }
+
+      function scopedUrl(path) {
+        const project = projectScope.value;
+        if (!project) return path;
+        const separator = path.includes('?') ? '&' : '?';
+        return `${path}${separator}project=${encodeURIComponent(project)}`;
       }
 
       function renderProjectConfigs(projects) {
@@ -560,8 +616,7 @@
           tag_schema: splitTags(form.get('tag_schema')),
         });
         await loadProjectConfigs();
-        await loadRuns();
-        await loadRemoteSources();
+        await handleProjectScopeChange();
       }
 
       function projectIndexForm(project) {
@@ -599,14 +654,12 @@
           log_root: form.get('log_root'),
         });
         await loadProjectConfigs();
-        await loadRuns();
-        await loadLineageOverview();
-        await loadTimeline();
+        await handleProjectScopeChange();
       }
 
       async function loadRemoteSources() {
         remoteSources.innerHTML = `<div class="empty">Loading remote sources...</div>`;
-        const response = await fetch('/api/remote-sources');
+        const response = await fetch(scopedUrl('/api/remote-sources'));
         const payload = await response.json();
         renderRemoteSources(payload.sources || []);
       }
@@ -742,6 +795,7 @@
           exclude_patterns: splitTags(form.get('exclude_patterns')),
         });
         await loadRemoteSources();
+        await loadProjectConfigs();
       }
 
       function remoteSyncForm(source) {
@@ -803,7 +857,7 @@
 
       async function loadLineageOverview() {
         lineageOverview.innerHTML = `<div class="empty">Loading lineage...</div>`;
-        const response = await fetch('/api/lineage');
+        const response = await fetch(scopedUrl('/api/lineage'));
         const payload = await response.json();
         renderLineageOverview(payload);
       }
@@ -1065,7 +1119,7 @@
 
       async function loadTimeline() {
         timelineOverview.innerHTML = `<div class="empty">Loading timeline...</div>`;
-        const response = await fetch('/api/timeline');
+        const response = await fetch(scopedUrl('/api/timeline'));
         const payload = await response.json();
         renderTimeline(payload.entries || []);
       }
