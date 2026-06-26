@@ -604,6 +604,19 @@
 - [x] **Step 2: Move FastAPI and uvicorn into base package dependencies so `rl-exp-dashboard serve` works after normal install.**
 - [x] **Step 3: Run targeted and full verification, then commit.**
 
+## Task 41: Docker Deployment Skeleton
+
+**Files:**
+- Create: `Dockerfile`
+- Create: `.dockerignore`
+- Modify: `tests/test_package_metadata.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests proving Dockerfile exposes port 7860, installs the package, serves `/data`, and `.dockerignore` excludes local caches/logs.**
+- [x] **Step 2: Add a minimal Python slim Dockerfile for the packaged dashboard server.**
+- [x] **Step 3: Add `.dockerignore` entries for caches, logs, data downloads, videos, and VCS noise.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
