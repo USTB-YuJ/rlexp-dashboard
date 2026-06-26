@@ -163,7 +163,7 @@
       }
       .table-controls {
         display: grid;
-        grid-template-columns: minmax(180px, 1.2fr) repeat(5, minmax(120px, 0.8fr));
+        grid-template-columns: minmax(180px, 1.2fr) repeat(6, minmax(120px, 0.8fr));
         gap: 10px;
         padding: 12px 16px;
         border-bottom: 1px solid var(--line);
@@ -316,6 +316,12 @@
             </select>
           </label>
           <label>
+            <div class="label">Tag</div>
+            <select id="tag-filter">
+              <option value="">All tags</option>
+            </select>
+          </label>
+          <label>
             <div class="label">Flags</div>
             <select id="flag-filter">
               <option value="">All flags</option>
@@ -346,6 +352,7 @@
               <th>Algorithm</th>
               <th>Reward</th>
               <th>Review</th>
+              <th>Tags</th>
               <th>Lineage</th>
               <th>Media</th>
               <th>Latest Checkpoint</th>
@@ -355,7 +362,7 @@
           </thead>
           <tbody id="run-table-body">
             <tr>
-              <td colspan="11" class="empty">Loading runs...</td>
+              <td colspan="12" class="empty">Loading runs...</td>
             </tr>
           </tbody>
         </table>
@@ -444,6 +451,7 @@
       const projectFilter = document.getElementById('project-filter');
       const groupFilter = document.getElementById('group-filter');
       const reviewFilter = document.getElementById('review-filter');
+      const tagFilter = document.getElementById('tag-filter');
       const flagFilter = document.getElementById('flag-filter');
       const runSort = document.getElementById('run-sort');
       const compareBeforeRun = document.getElementById('compare-before-run');
@@ -471,11 +479,12 @@
       projectFilter.addEventListener('change', renderFilteredRuns);
       groupFilter.addEventListener('change', renderFilteredRuns);
       reviewFilter.addEventListener('change', renderFilteredRuns);
+      tagFilter.addEventListener('change', renderFilteredRuns);
       flagFilter.addEventListener('change', renderFilteredRuns);
       runSort.addEventListener('change', renderFilteredRuns);
 
       async function loadRuns() {
-        runTableBody.innerHTML = `<tr><td colspan="11" class="empty">Loading runs...</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="12" class="empty">Loading runs...</td></tr>`;
         const response = await fetch(scopedUrl('/api/runs'));
         const payload = await response.json();
         renderRuns(payload.runs || []);
@@ -1186,6 +1195,7 @@
         const project = projectFilter.value;
         const group = groupFilter.value;
         const review = reviewFilter.value;
+        const tag = tagFilter.value;
         const flag = flagFilter.value;
         let runs = indexedRuns.filter((run) => {
           const searchable = [
@@ -1198,6 +1208,7 @@
             run.review_verdict,
             run.recommended_checkpoint,
             formatCheckpointReviewSummary(run),
+            formatRunTags(run),
             formatRunLineage(run),
             formatRunMedia(run),
             formatTimestamp(run.start_time),
@@ -1209,12 +1220,13 @@
             (!project || run.project_name === project) &&
             (!group || run.group === group) &&
             (!review || (run.review_verdict || 'unreviewed') === review) &&
+            matchesRunTag(run, tag) &&
             matchesRunFlag(run, flag)
           );
         });
         runs = sortRuns(runs, runSort.value);
         if (runs.length === 0) {
-          runTableBody.innerHTML = `<tr><td colspan="11" class="empty">No runs match the current filters.</td></tr>`;
+          runTableBody.innerHTML = `<tr><td colspan="12" class="empty">No runs match the current filters.</td></tr>`;
           return;
         }
         runTableBody.innerHTML = runs
@@ -1227,6 +1239,7 @@
                 <td>${escapeHtml(run.algorithm_name || '')}</td>
                 <td>${formatNumber(keyMetricValue(run, 'Train/mean_reward'))}</td>
                 <td>${escapeHtml(formatRunReview(run))}</td>
+                <td>${escapeHtml(formatRunTags(run))}</td>
                 <td>${escapeHtml(formatRunLineage(run))}</td>
                 <td>${escapeHtml(formatRunMedia(run))}</td>
                 <td>${escapeHtml(run.latest_checkpoint || '')}</td>
@@ -1244,6 +1257,7 @@
       function populateRunFilters(runs) {
         populateSelect(projectFilter, uniqueValues(runs.map((run) => run.project_name)), 'All projects');
         populateSelect(groupFilter, uniqueValues(runs.map((run) => run.group)), 'All groups');
+        populateSelect(tagFilter, uniqueValues(runs.flatMap((run) => run.all_tags || [])), 'All tags');
       }
 
       function populateSelect(select, values, emptyLabel) {
@@ -1292,6 +1306,10 @@
         return run.has_reviewed_checkpoint ? 'checkpoint reviewed' : '';
       }
 
+      function formatRunTags(run) {
+        return (run.all_tags || []).join(', ');
+      }
+
       function formatReviewScore(score) {
         if (score === null || score === undefined || score === '') return '';
         return ` score ${formatNumber(score)}`;
@@ -1310,6 +1328,11 @@
         if (Number(run.video_count || 0) > 0) parts.push(`${run.video_count} video`);
         if (Number(run.artifact_count || 0) > 0) parts.push(`${run.artifact_count} artifact`);
         return parts.join(', ');
+      }
+
+      function matchesRunTag(run, tag) {
+        if (!tag) return true;
+        return (run.all_tags || []).includes(tag);
       }
 
       function matchesRunFlag(run, flag) {
@@ -1960,7 +1983,7 @@
       }
 
       loadRuns().catch((error) => {
-        runTableBody.innerHTML = `<tr><td colspan="11" class="empty">${escapeHtml(error.message)}</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="12" class="empty">${escapeHtml(error.message)}</td></tr>`;
       });
       loadProjectConfigs().catch((error) => {
         projectConfigs.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;

@@ -441,11 +441,18 @@ def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str
     child_lineage = store.list_child_lineage(run_id)
     row = dict(run)
     review_summary = _checkpoint_review_summary(checkpoint_reviews)
+    review_tags = _unique_tags(observation.get("tags", []))
+    checkpoint_review_tags = _unique_tags(
+        tag for review in checkpoint_reviews for tag in review.get("tags", [])
+    )
     row.update(
         {
             "review_verdict": observation.get("verdict", "unreviewed"),
             "recommended_checkpoint": observation.get("recommended_checkpoint"),
             **review_summary,
+            "review_tags": review_tags,
+            "checkpoint_review_tags": checkpoint_review_tags,
+            "all_tags": _unique_tags([*review_tags, *checkpoint_review_tags]),
             "has_observation": bool(observation),
             "has_reviewed_checkpoint": bool(checkpoint_reviews),
             "video_count": sum(1 for artifact in artifacts if artifact["kind"] == "video"),
@@ -461,6 +468,10 @@ def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str
         }
     )
     return row
+
+
+def _unique_tags(tags: Any) -> list[str]:
+    return sorted({str(tag).strip() for tag in tags or [] if str(tag).strip()})
 
 
 def _checkpoint_review_summary(checkpoint_reviews: list[Dict[str, Any]]) -> Dict[str, Any]:

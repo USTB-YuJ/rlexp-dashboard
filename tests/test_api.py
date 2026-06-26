@@ -84,7 +84,7 @@ class ApiPayloadTests(unittest.TestCase):
                 checkpoint="model_20.pt",
                 status="mixed",
                 notes="Visual review done.",
-                tags=["reviewed"],
+                tags=["stairs"],
                 score=0.72,
                 recommended=True,
             )
@@ -102,6 +102,9 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(child["best_review_checkpoint"], "model_20.pt")
         self.assertEqual(child["best_review_score"], 0.72)
         self.assertEqual(child["best_review_status"], "mixed")
+        self.assertEqual(child["review_tags"], ["reviewed"])
+        self.assertEqual(child["checkpoint_review_tags"], ["stairs"])
+        self.assertEqual(child["all_tags"], ["reviewed", "stairs"])
         self.assertEqual(child["has_observation"], True)
         self.assertEqual(child["has_reviewed_checkpoint"], True)
         self.assertEqual(child["video_count"], 1)
