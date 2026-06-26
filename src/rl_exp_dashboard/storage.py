@@ -202,6 +202,13 @@ class DashboardStore:
             rows = conn.execute(query, params).fetchall()
         return [self._run_row_to_dict(row) for row in rows]
 
+    def get_run(self, run_id: str) -> Optional[Dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute("select * from runs where run_id = ?", (run_id,)).fetchone()
+        if row is None:
+            return None
+        return self._run_row_to_dict(row)
+
     def list_checkpoints(self, run_id: str) -> List[Dict[str, Any]]:
         with self._connect() as conn:
             rows = conn.execute(
@@ -248,6 +255,25 @@ class DashboardStore:
             rows = conn.execute(
                 "select * from lineage_edges where child_run_id = ? order by parent_run_id",
                 (child_run_id,),
+            ).fetchall()
+        return [
+            {
+                "parent_run_id": row["parent_run_id"],
+                "child_run_id": row["child_run_id"],
+                "relationship": row["relationship"],
+                "parent_checkpoint": row["parent_checkpoint"],
+                "intended_change": row["intended_change"],
+                "note": row["note"],
+                "confirmed": bool(row["confirmed"]),
+            }
+            for row in rows
+        ]
+
+    def list_child_lineage(self, parent_run_id: str) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "select * from lineage_edges where parent_run_id = ? order by child_run_id",
+                (parent_run_id,),
             ).fetchall()
         return [
             {

@@ -109,10 +109,27 @@
 - [x] **Step 9: Write failing tests for API metric summary payload helper.**
 - [x] **Step 10: Add `/api/runs/{run_id}/metrics` payload support.**
 
+## Task 7: Minimal Web Dashboard View
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Create: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing tests for run detail and compare payload helpers.**
+- [x] **Step 2: Add storage helpers for single-run lookup and child lineage lookup.**
+- [x] **Step 3: Implement run detail payload with run, checkpoints, metrics, and lineage.**
+- [x] **Step 4: Implement compare payload with config diffs and metric last-value deltas.**
+- [x] **Step 5: Write failing test for static dashboard structure and API calls.**
+- [x] **Step 6: Replace placeholder static HTML with a run table and run detail panel.**
+- [x] **Step 7: Add stable query-based API endpoints for run detail and metrics.**
+
 ## Later Milestones
 
 - Sampled metric time-series storage for charts.
 - Remote sync with SSH/rsync/scp.
 - React/Vite frontend.
-- Run detail, compare, lineage graph, checkpoint review UI.
+- Rich compare, lineage graph, checkpoint review UI.
 - Packaged frontend build pipeline and Dockerfile.

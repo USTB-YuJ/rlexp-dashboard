@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rl_exp_dashboard.api import metric_summaries_payload
-from rl_exp_dashboard.models import MetricSummary, RunRecord
+from rl_exp_dashboard.api import compare_runs_payload, metric_summaries_payload, run_detail_payload
+from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
 
 
@@ -44,6 +44,105 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["run_id"], "group/run")
         self.assertEqual(payload["metrics"][0]["tag"], "Train/mean_reward")
         self.assertEqual(payload["metrics"][0]["window_means"]["mean100"], 1.5)
+
+    def test_run_detail_payload_combines_run_checkpoints_metrics_and_lineage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+
+            payload = run_detail_payload(store, "group/child")
+
+        self.assertEqual(payload["run"]["run_id"], "group/child")
+        self.assertEqual(payload["checkpoints"][0]["iteration"], 20)
+        self.assertEqual(payload["metrics"][0]["tag"], "Train/mean_reward")
+        self.assertEqual(payload["parent_lineage"][0]["parent_run_id"], "group/parent")
+        self.assertEqual(payload["child_lineage"], [])
+
+    def test_compare_runs_payload_returns_config_diff_and_metric_delta(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+
+            payload = compare_runs_payload(store, "group/parent", "group/child")
+            diffs_by_path = {item["path"]: item for item in payload["config_diffs"]}
+            deltas_by_tag = {item["tag"]: item for item in payload["metric_deltas"]}
+
+        self.assertEqual(payload["before"]["run_id"], "group/parent")
+        self.assertEqual(payload["after"]["run_id"], "group/child")
+        self.assertEqual(diffs_by_path["agent.algorithm.entropy_coef"]["kind"], "changed")
+        self.assertEqual(diffs_by_path["agent.algorithm.entropy_coef"]["before"], 0.01)
+        self.assertEqual(diffs_by_path["agent.algorithm.entropy_coef"]["after"], 0.005)
+        self.assertEqual(deltas_by_tag["Train/mean_reward"]["before_last_value"], 1.0)
+        self.assertEqual(deltas_by_tag["Train/mean_reward"]["after_last_value"], 2.0)
+        self.assertEqual(deltas_by_tag["Train/mean_reward"]["delta_last_value"], 1.0)
+
+    def _store_with_parent_and_child(self, tmp_path: Path) -> DashboardStore:
+        store = DashboardStore(tmp_path / "dashboard.sqlite3")
+        store.initialize()
+        store.upsert_project("project", tmp_path / "cache")
+        store.upsert_run(
+            "project",
+            RunRecord(
+                run_id="group/parent",
+                name="parent",
+                group="group",
+                path=tmp_path / "parent",
+                modified_time=1.0,
+                params={"agent": {"algorithm": {"entropy_coef": 0.01}}},
+                metric_summaries=[
+                    MetricSummary(
+                        tag="Train/mean_reward",
+                        first_step=0,
+                        last_step=10,
+                        first_value=1.0,
+                        last_value=1.0,
+                        min_value=1.0,
+                        max_value=1.0,
+                        count=1,
+                    )
+                ],
+            ),
+        )
+        store.upsert_run(
+            "project",
+            RunRecord(
+                run_id="group/child",
+                name="child",
+                group="group",
+                path=tmp_path / "child",
+                modified_time=2.0,
+                params={"agent": {"algorithm": {"entropy_coef": 0.005}}},
+                checkpoints=[
+                    CheckpointRecord(
+                        path=tmp_path / "child" / "model_20.pt",
+                        iteration=20,
+                        size_bytes=128,
+                        modified_time=2.0,
+                        is_latest=True,
+                    )
+                ],
+                metric_summaries=[
+                    MetricSummary(
+                        tag="Train/mean_reward",
+                        first_step=0,
+                        last_step=10,
+                        first_value=2.0,
+                        last_value=2.0,
+                        min_value=2.0,
+                        max_value=2.0,
+                        count=1,
+                    )
+                ],
+            ),
+        )
+        store.upsert_lineage(
+            LineageEdge(
+                parent_run_id="group/parent",
+                child_run_id="group/child",
+                relationship="finetune",
+                parent_checkpoint="model_10.pt",
+                intended_change="lower entropy",
+            )
+        )
+        return store
 
 
 if __name__ == "__main__":
