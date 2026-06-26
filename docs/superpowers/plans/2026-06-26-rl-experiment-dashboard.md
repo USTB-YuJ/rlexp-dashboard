@@ -580,6 +580,19 @@
 - [x] **Step 3: Use the same helper from CLI indexing.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 39: Package README Entry Point
+
+**Files:**
+- Create: `README.md`
+- Modify: `pyproject.toml`
+- Create: `tests/test_package_metadata.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests that `pyproject.toml` points to `README.md` and the README documents install, serve, sync, index, and Docker startup.**
+- [x] **Step 2: Create a concise open-source README for local deployment and first-run workflow.**
+- [x] **Step 3: Update `pyproject.toml` package metadata to use `README.md`.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
