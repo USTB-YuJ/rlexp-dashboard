@@ -4,6 +4,7 @@ from pathlib import Path
 
 from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
+from rl_exp_dashboard.sync import RemoteSource
 
 
 class DashboardStoreTests(unittest.TestCase):
@@ -91,6 +92,42 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(lineage[0]["parent_run_id"], "group/parent")
         self.assertEqual(lineage[0]["relationship"], "finetune")
         self.assertEqual(lineage[0]["intended_change"], "lower entropy")
+
+    def test_store_persists_remote_sources_and_sync_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "dashboard.sqlite3"
+            store = DashboardStore(db_path)
+            store.initialize()
+            store.upsert_project("project", Path(tmp) / "cache")
+            store.upsert_remote_source(
+                RemoteSource(
+                    name="x-server",
+                    host="example.com",
+                    user="robot",
+                    port=2222,
+                    remote_log_root="/logs/rsl_rl",
+                    project="project",
+                    method="rsync",
+                )
+            )
+            store.record_sync_status(
+                source_name="x-server",
+                project="project",
+                status="dry-run",
+                command=["rsync", "--dry-run"],
+                local_path=Path(tmp) / "cache" / "x-server",
+                message="preview only",
+            )
+
+            sources = store.list_remote_sources("project")
+            status = store.latest_sync_status("x-server", "project")
+
+        self.assertEqual(sources[0]["name"], "x-server")
+        self.assertEqual(sources[0]["port"], 2222)
+        self.assertEqual(sources[0]["remote_log_root"], "/logs/rsl_rl")
+        self.assertEqual(status["status"], "dry-run")
+        self.assertEqual(status["command"], ["rsync", "--dry-run"])
+        self.assertEqual(status["message"], "preview only")
 
 
 if __name__ == "__main__":

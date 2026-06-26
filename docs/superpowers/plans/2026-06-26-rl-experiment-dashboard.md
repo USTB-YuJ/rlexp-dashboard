@@ -126,10 +126,31 @@
 - [x] **Step 6: Replace placeholder static HTML with a run table and run detail panel.**
 - [x] **Step 7: Add stable query-based API endpoints for run detail and metrics.**
 
+## Task 8: Remote Sync Skeleton
+
+**Files:**
+- Create: `tests/test_sync.py`
+- Create: `src/rl_exp_dashboard/sync.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_cli.py`
+- Modify: `tests/test_api.py`
+
+- [x] **Step 1: Write failing tests for remote source sync plan generation.**
+- [x] **Step 2: Implement `RemoteSource`, `SyncPlan`, and dry-run command builders for `rsync`, `scp`, and `ssh-tar`.**
+- [x] **Step 3: Write failing tests for remote source and sync status persistence.**
+- [x] **Step 4: Add `remote_sources` and `sync_status` SQLite tables and repository methods.**
+- [x] **Step 5: Write failing tests for `rl-exp-dashboard sync --dry-run`.**
+- [x] **Step 6: Implement CLI dry-run sync preview and sync status recording.**
+- [x] **Step 7: Write failing tests for remote sources API payload.**
+- [x] **Step 8: Add `/api/remote-sources` payload support.**
+
 ## Later Milestones
 
 - Sampled metric time-series storage for charts.
-- Remote sync with SSH/rsync/scp.
+- Actual remote sync execution with SSH/rsync/scp.
 - React/Vite frontend.
 - Rich compare, lineage graph, checkpoint review UI.
 - Packaged frontend build pipeline and Dockerfile.

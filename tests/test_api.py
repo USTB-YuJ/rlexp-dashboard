@@ -2,9 +2,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rl_exp_dashboard.api import compare_runs_payload, metric_summaries_payload, run_detail_payload
+from rl_exp_dashboard.api import compare_runs_payload, metric_summaries_payload, remote_sources_payload, run_detail_payload
 from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
+from rl_exp_dashboard.sync import RemoteSource
 
 
 class ApiPayloadTests(unittest.TestCase):
@@ -73,6 +74,35 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["before_last_value"], 1.0)
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["after_last_value"], 2.0)
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["delta_last_value"], 1.0)
+
+    def test_remote_sources_payload_includes_latest_sync_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = DashboardStore(Path(tmp) / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project("project", Path(tmp) / "cache")
+            store.upsert_remote_source(
+                RemoteSource(
+                    name="x-server",
+                    host="example.com",
+                    user="eai",
+                    port=12188,
+                    remote_log_root="/logs/rsl_rl",
+                    project="project",
+                )
+            )
+            store.record_sync_status(
+                source_name="x-server",
+                project="project",
+                status="dry-run",
+                command=["rsync", "--dry-run"],
+                local_path=Path(tmp) / "cache",
+            )
+
+            payload = remote_sources_payload(store, "project")
+
+        self.assertEqual(payload["sources"][0]["name"], "x-server")
+        self.assertEqual(payload["sources"][0]["latest_sync"]["status"], "dry-run")
+        self.assertEqual(payload["sources"][0]["latest_sync"]["command"], ["rsync", "--dry-run"])
 
     def _store_with_parent_and_child(self, tmp_path: Path) -> DashboardStore:
         store = DashboardStore(tmp_path / "dashboard.sqlite3")

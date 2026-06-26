@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .models import LineageEdge, RunRecord
+from .sync import RemoteSource
 
 
 class DashboardStore:
@@ -20,6 +22,28 @@ class DashboardStore:
                 create table if not exists projects (
                     name text primary key,
                     local_cache_root text not null
+                );
+
+                create table if not exists remote_sources (
+                    name text not null,
+                    project_name text not null references projects(name),
+                    host text not null,
+                    user text not null,
+                    port integer not null,
+                    remote_log_root text not null,
+                    method text not null,
+                    primary key (name, project_name)
+                );
+
+                create table if not exists sync_status (
+                    id integer primary key autoincrement,
+                    source_name text not null,
+                    project_name text not null,
+                    status text not null,
+                    command_json text not null,
+                    local_path text not null,
+                    message text not null,
+                    created_at real not null
                 );
 
                 create table if not exists runs (
@@ -83,6 +107,105 @@ class DashboardStore:
                 """,
                 (name, str(local_cache_root)),
             )
+
+    def upsert_remote_source(self, source: RemoteSource) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                insert into remote_sources (
+                    name, project_name, host, user, port, remote_log_root, method
+                )
+                values (?, ?, ?, ?, ?, ?, ?)
+                on conflict(name, project_name) do update set
+                    host=excluded.host,
+                    user=excluded.user,
+                    port=excluded.port,
+                    remote_log_root=excluded.remote_log_root,
+                    method=excluded.method
+                """,
+                (
+                    source.name,
+                    source.project,
+                    source.host,
+                    source.user,
+                    source.port,
+                    source.remote_log_root,
+                    source.method,
+                ),
+            )
+
+    def list_remote_sources(self, project_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        query = "select * from remote_sources"
+        params: tuple[Any, ...] = ()
+        if project_name is not None:
+            query += " where project_name = ?"
+            params = (project_name,)
+        query += " order by name"
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [
+            {
+                "name": row["name"],
+                "project": row["project_name"],
+                "host": row["host"],
+                "user": row["user"],
+                "port": row["port"],
+                "remote_log_root": row["remote_log_root"],
+                "method": row["method"],
+            }
+            for row in rows
+        ]
+
+    def record_sync_status(
+        self,
+        source_name: str,
+        project: str,
+        status: str,
+        command: List[str],
+        local_path: Path,
+        message: str = "",
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                insert into sync_status (
+                    source_name, project_name, status, command_json, local_path, message, created_at
+                )
+                values (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source_name,
+                    project,
+                    status,
+                    json.dumps(command),
+                    str(local_path),
+                    message,
+                    time.time(),
+                ),
+            )
+
+    def latest_sync_status(self, source_name: str, project: str) -> Optional[Dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                select * from sync_status
+                where source_name = ? and project_name = ?
+                order by created_at desc, id desc
+                limit 1
+                """,
+                (source_name, project),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "source_name": row["source_name"],
+            "project": row["project_name"],
+            "status": row["status"],
+            "command": json.loads(row["command_json"]),
+            "local_path": row["local_path"],
+            "message": row["message"],
+            "created_at": row["created_at"],
+        }
 
     def upsert_run(self, project_name: str, run: RunRecord) -> None:
         latest_checkpoint = next((checkpoint.path.name for checkpoint in run.checkpoints if checkpoint.is_latest), None)

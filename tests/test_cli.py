@@ -90,6 +90,48 @@ class CliTests(unittest.TestCase):
         self.assertEqual(metrics[0]["tag"], "Train/mean_reward")
         self.assertEqual(metrics[0]["last_value"], 3.0)
 
+    def test_sync_dry_run_records_remote_source_and_prints_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            db_path = tmp_path / "dashboard.sqlite3"
+            cache_root = tmp_path / "cache"
+            output = StringIO()
+
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "sync",
+                        "--project",
+                        "unitree_rl_mjlab",
+                        "--source-name",
+                        "x-server",
+                        "--host",
+                        "example.com",
+                        "--user",
+                        "eai",
+                        "--port",
+                        "12188",
+                        "--remote-log-root",
+                        "/remote/logs/rsl_rl",
+                        "--cache-root",
+                        str(cache_root),
+                        "--db",
+                        str(db_path),
+                        "--dry-run",
+                    ]
+                )
+
+            store = DashboardStore(db_path)
+            sources = store.list_remote_sources("unitree_rl_mjlab")
+            status = store.latest_sync_status("x-server", "unitree_rl_mjlab")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("rsync", output.getvalue())
+        self.assertIn("--dry-run", output.getvalue())
+        self.assertEqual(sources[0]["name"], "x-server")
+        self.assertEqual(status["status"], "dry-run")
+        self.assertIn("--dry-run", status["command"])
+
 
 if __name__ == "__main__":
     unittest.main()

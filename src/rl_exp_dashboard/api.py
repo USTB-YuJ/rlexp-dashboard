@@ -44,6 +44,15 @@ def compare_runs_payload(store: DashboardStore, before_run_id: str, after_run_id
     }
 
 
+def remote_sources_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
+    sources = []
+    for source in store.list_remote_sources(project):
+        source = dict(source)
+        source["latest_sync"] = store.latest_sync_status(source["name"], source["project"])
+        sources.append(source)
+    return {"sources": sources}
+
+
 def _metric_deltas(before_metrics: list[Dict[str, Any]], after_metrics: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
     before_by_tag = {metric["tag"]: metric for metric in before_metrics}
     after_by_tag = {metric["tag"]: metric for metric in after_metrics}
@@ -84,6 +93,10 @@ def create_app(db_path: Path):
     @app.get("/api/runs")
     def list_runs(project: str | None = None):
         return {"runs": store.list_runs(project)}
+
+    @app.get("/api/remote-sources")
+    def list_remote_sources(project: str | None = None):
+        return remote_sources_payload(store, project)
 
     @app.get("/api/run-detail")
     def get_run_detail(run_id: str):
