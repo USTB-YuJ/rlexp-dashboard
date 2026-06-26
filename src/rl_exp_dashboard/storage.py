@@ -94,6 +94,28 @@ class DashboardStore:
                     confirmed integer not null,
                     primary key (parent_run_id, child_run_id)
                 );
+
+                create table if not exists run_observations (
+                    run_id text primary key references runs(run_id),
+                    verdict text not null,
+                    summary text not null,
+                    tags_json text not null,
+                    recommended_checkpoint text,
+                    updated_at real not null
+                );
+
+                create table if not exists checkpoint_reviews (
+                    run_id text not null references runs(run_id),
+                    checkpoint text not null,
+                    status text not null,
+                    notes text not null,
+                    tags_json text not null,
+                    video_path text not null,
+                    score real,
+                    recommended integer not null,
+                    updated_at real not null,
+                    primary key (run_id, checkpoint)
+                );
                 """
             )
 
@@ -407,6 +429,114 @@ class DashboardStore:
                 "intended_change": row["intended_change"],
                 "note": row["note"],
                 "confirmed": bool(row["confirmed"]),
+            }
+            for row in rows
+        ]
+
+    def upsert_run_observation(
+        self,
+        run_id: str,
+        verdict: str,
+        summary: str,
+        tags: List[str],
+        recommended_checkpoint: Optional[str] = None,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                insert into run_observations (
+                    run_id, verdict, summary, tags_json, recommended_checkpoint, updated_at
+                )
+                values (?, ?, ?, ?, ?, ?)
+                on conflict(run_id) do update set
+                    verdict=excluded.verdict,
+                    summary=excluded.summary,
+                    tags_json=excluded.tags_json,
+                    recommended_checkpoint=excluded.recommended_checkpoint,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    run_id,
+                    verdict,
+                    summary,
+                    json.dumps(tags),
+                    recommended_checkpoint,
+                    time.time(),
+                ),
+            )
+
+    def get_run_observation(self, run_id: str) -> Optional[Dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute("select * from run_observations where run_id = ?", (run_id,)).fetchone()
+        if row is None:
+            return None
+        return {
+            "run_id": row["run_id"],
+            "verdict": row["verdict"],
+            "summary": row["summary"],
+            "tags": json.loads(row["tags_json"]),
+            "recommended_checkpoint": row["recommended_checkpoint"],
+            "updated_at": row["updated_at"],
+        }
+
+    def upsert_checkpoint_review(
+        self,
+        run_id: str,
+        checkpoint: str,
+        status: str,
+        notes: str,
+        tags: List[str],
+        video_path: str = "",
+        score: Optional[float] = None,
+        recommended: bool = False,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                insert into checkpoint_reviews (
+                    run_id, checkpoint, status, notes, tags_json, video_path,
+                    score, recommended, updated_at
+                )
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict(run_id, checkpoint) do update set
+                    status=excluded.status,
+                    notes=excluded.notes,
+                    tags_json=excluded.tags_json,
+                    video_path=excluded.video_path,
+                    score=excluded.score,
+                    recommended=excluded.recommended,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    run_id,
+                    checkpoint,
+                    status,
+                    notes,
+                    json.dumps(tags),
+                    video_path,
+                    score,
+                    int(recommended),
+                    time.time(),
+                ),
+            )
+
+    def list_checkpoint_reviews(self, run_id: str) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "select * from checkpoint_reviews where run_id = ? order by checkpoint",
+                (run_id,),
+            ).fetchall()
+        return [
+            {
+                "run_id": row["run_id"],
+                "checkpoint": row["checkpoint"],
+                "status": row["status"],
+                "notes": row["notes"],
+                "tags": json.loads(row["tags_json"]),
+                "video_path": row["video_path"],
+                "score": row["score"],
+                "recommended": bool(row["recommended"]),
+                "updated_at": row["updated_at"],
             }
             for row in rows
         ]

@@ -12,6 +12,10 @@ class StaticDashboardTests(unittest.TestCase):
         self.assertIn("fetch(`/api/run-detail?run_id=${encodeURIComponent(runId)}`)", html)
         self.assertIn("Metric Summaries", html)
         self.assertIn("Checkpoints", html)
+        self.assertIn("Manual Observation", html)
+        self.assertIn("Checkpoint Reviews", html)
+        self.assertIn("/api/run-observation", html)
+        self.assertIn("/api/checkpoint-review", html)
 
 
 if __name__ == "__main__":

@@ -21,6 +21,8 @@ def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
         "metrics": store.list_metric_summaries(run_id),
         "parent_lineage": store.list_lineage(run_id),
         "child_lineage": store.list_child_lineage(run_id),
+        "observation": store.get_run_observation(run_id),
+        "checkpoint_reviews": store.list_checkpoint_reviews(run_id),
     }
 
 
@@ -51,6 +53,37 @@ def remote_sources_payload(store: DashboardStore, project: str | None = None) ->
         source["latest_sync"] = store.latest_sync_status(source["name"], source["project"])
         sources.append(source)
     return {"sources": sources}
+
+
+def save_run_observation_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict[str, Any]:
+    run_id = str(payload["run_id"])
+    store.upsert_run_observation(
+        run_id=run_id,
+        verdict=str(payload.get("verdict", "unreviewed")),
+        summary=str(payload.get("summary", "")),
+        tags=list(payload.get("tags", [])),
+        recommended_checkpoint=payload.get("recommended_checkpoint") or None,
+    )
+    return {"run_id": run_id, "observation": store.get_run_observation(run_id)}
+
+
+def save_checkpoint_review_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict[str, Any]:
+    run_id = str(payload["run_id"])
+    checkpoint = str(payload["checkpoint"])
+    store.upsert_checkpoint_review(
+        run_id=run_id,
+        checkpoint=checkpoint,
+        status=str(payload.get("status", "unreviewed")),
+        notes=str(payload.get("notes", "")),
+        tags=list(payload.get("tags", [])),
+        video_path=str(payload.get("video_path", "")),
+        score=payload.get("score"),
+        recommended=bool(payload.get("recommended", False)),
+    )
+    review = next(
+        item for item in store.list_checkpoint_reviews(run_id) if item["checkpoint"] == checkpoint
+    )
+    return {"run_id": run_id, "review": review}
 
 
 def _metric_deltas(before_metrics: list[Dict[str, Any]], after_metrics: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
@@ -97,6 +130,14 @@ def create_app(db_path: Path):
     @app.get("/api/remote-sources")
     def list_remote_sources(project: str | None = None):
         return remote_sources_payload(store, project)
+
+    @app.post("/api/run-observation")
+    async def save_run_observation(payload: dict):
+        return save_run_observation_payload(store, payload)
+
+    @app.post("/api/checkpoint-review")
+    async def save_checkpoint_review(payload: dict):
+        return save_checkpoint_review_payload(store, payload)
 
     @app.get("/api/run-detail")
     def get_run_detail(run_id: str):

@@ -129,6 +129,55 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(status["command"], ["rsync", "--dry-run"])
         self.assertEqual(status["message"], "preview only")
 
+    def test_store_persists_run_observations_and_checkpoint_reviews(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "dashboard.sqlite3"
+            store = DashboardStore(db_path)
+            store.initialize()
+            store.upsert_project("project", Path(tmp) / "cache")
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/run",
+                    name="run",
+                    group="group",
+                    path=Path(tmp) / "run",
+                    modified_time=1.0,
+                ),
+            )
+
+            store.upsert_run_observation(
+                run_id="group/run",
+                verdict="mixed",
+                summary="Walks forward but sits on stairs.",
+                tags=["forward-walk", "sitting"],
+                recommended_checkpoint="model_100.pt",
+            )
+            store.upsert_checkpoint_review(
+                run_id="group/run",
+                checkpoint="model_100.pt",
+                status="mixed",
+                notes="Good on flat, bad on stairs.",
+                tags=["good-rough", "bad-stairs"],
+                video_path="videos/play/model_100.mp4",
+                score=0.65,
+                recommended=True,
+            )
+
+            observation = store.get_run_observation("group/run")
+            reviews = store.list_checkpoint_reviews("group/run")
+
+        self.assertEqual(observation["verdict"], "mixed")
+        self.assertEqual(observation["summary"], "Walks forward but sits on stairs.")
+        self.assertEqual(observation["tags"], ["forward-walk", "sitting"])
+        self.assertEqual(observation["recommended_checkpoint"], "model_100.pt")
+        self.assertEqual(reviews[0]["checkpoint"], "model_100.pt")
+        self.assertEqual(reviews[0]["status"], "mixed")
+        self.assertEqual(reviews[0]["tags"], ["good-rough", "bad-stairs"])
+        self.assertEqual(reviews[0]["video_path"], "videos/play/model_100.mp4")
+        self.assertEqual(reviews[0]["score"], 0.65)
+        self.assertEqual(reviews[0]["recommended"], True)
+
 
 if __name__ == "__main__":
     unittest.main()

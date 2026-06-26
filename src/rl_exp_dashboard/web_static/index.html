@@ -128,6 +128,30 @@
       button:hover {
         border-color: var(--accent);
       }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font: inherit;
+        font-size: 13px;
+        padding: 8px;
+      }
+      textarea {
+        min-height: 72px;
+        resize: vertical;
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
       @media (max-width: 920px) {
         main {
           grid-template-columns: 1fr;
@@ -232,15 +256,22 @@
             ${field('Latest Checkpoint', run.latest_checkpoint || '')}
           </div>
 
+          <h3 class="subhead">Manual Observation</h3>
+          ${observationPanel(run.run_id, payload.observation)}
+
           <h3 class="subhead">Metric Summaries</h3>
           ${metricTable(payload.metrics || [])}
 
           <h3 class="subhead">Checkpoints</h3>
           ${checkpointTable(payload.checkpoints || [])}
 
+          <h3 class="subhead">Checkpoint Reviews</h3>
+          ${checkpointReviewPanel(run.run_id, payload.checkpoints || [], payload.checkpoint_reviews || [])}
+
           <h3 class="subhead">Lineage</h3>
           ${lineageTable(payload.parent_lineage || [], payload.child_lineage || [])}
         `;
+        bindObservationForms(run.run_id);
       }
 
       function field(label, value) {
@@ -304,6 +335,143 @@
         `;
       }
 
+      function observationPanel(runId, observation) {
+        const tags = (observation?.tags || []).join(', ');
+        return `
+          <form id="run-observation-form">
+            <div class="form-row">
+              <label>
+                <div class="label">Verdict</div>
+                <select name="verdict">
+                  ${option('unreviewed', observation?.verdict)}
+                  ${option('good', observation?.verdict)}
+                  ${option('mixed', observation?.verdict)}
+                  ${option('bad', observation?.verdict)}
+                  ${option('exported', observation?.verdict)}
+                </select>
+              </label>
+              <label>
+                <div class="label">Recommended checkpoint</div>
+                <input name="recommended_checkpoint" value="${escapeHtml(observation?.recommended_checkpoint || '')}" />
+              </label>
+            </div>
+            <label>
+              <div class="label">Summary</div>
+              <textarea name="summary">${escapeHtml(observation?.summary || '')}</textarea>
+            </label>
+            <label>
+              <div class="label">Tags, comma separated</div>
+              <input name="tags" value="${escapeHtml(tags)}" />
+            </label>
+            <div class="form-actions">
+              <button type="submit">Save Observation</button>
+            </div>
+          </form>
+        `;
+      }
+
+      function checkpointReviewPanel(runId, checkpoints, reviews) {
+        const byCheckpoint = new Map(reviews.map((review) => [review.checkpoint, review]));
+        const checkpointOptions = checkpoints
+          .map((checkpoint) => checkpoint.path.split('/').pop())
+          .filter(Boolean);
+        const selected = checkpointOptions[0] || '';
+        const reviewRows =
+          reviews.length === 0
+            ? `<div class="empty">No checkpoint reviews yet.</div>`
+            : `<table>
+                <thead><tr><th>Checkpoint</th><th>Status</th><th>Tags</th><th>Notes</th></tr></thead>
+                <tbody>
+                  ${reviews
+                    .map(
+                      (review) => `
+                        <tr>
+                          <td>${escapeHtml(review.checkpoint)}</td>
+                          <td>${escapeHtml(review.status)}</td>
+                          <td>${escapeHtml((review.tags || []).join(', '))}</td>
+                          <td>${escapeHtml(review.notes || '')}</td>
+                        </tr>
+                      `,
+                    )
+                    .join('')}
+                </tbody>
+              </table>`;
+        return `
+          ${reviewRows}
+          <form id="checkpoint-review-form">
+            <div class="form-row">
+              <label>
+                <div class="label">Checkpoint</div>
+                <select name="checkpoint">
+                  ${checkpointOptions.map((name) => option(name, selected)).join('')}
+                </select>
+              </label>
+              <label>
+                <div class="label">Status</div>
+                <select name="status">
+                  ${option('unreviewed')}
+                  ${option('good')}
+                  ${option('mixed')}
+                  ${option('bad')}
+                  ${option('exported')}
+                </select>
+              </label>
+            </div>
+            <label>
+              <div class="label">Notes</div>
+              <textarea name="notes"></textarea>
+            </label>
+            <div class="form-row">
+              <label>
+                <div class="label">Tags, comma separated</div>
+                <input name="tags" />
+              </label>
+              <label>
+                <div class="label">Video path</div>
+                <input name="video_path" />
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit">Save Checkpoint Review</button>
+            </div>
+          </form>
+        `;
+      }
+
+      function bindObservationForms(runId) {
+        const observationForm = document.getElementById('run-observation-form');
+        if (observationForm) {
+          observationForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = new FormData(observationForm);
+            await postJson('/api/run-observation', {
+              run_id: runId,
+              verdict: form.get('verdict'),
+              summary: form.get('summary'),
+              tags: splitTags(form.get('tags')),
+              recommended_checkpoint: form.get('recommended_checkpoint'),
+            });
+            await loadRunDetail(runId);
+          });
+        }
+        const reviewForm = document.getElementById('checkpoint-review-form');
+        if (reviewForm) {
+          reviewForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = new FormData(reviewForm);
+            await postJson('/api/checkpoint-review', {
+              run_id: runId,
+              checkpoint: form.get('checkpoint'),
+              status: form.get('status'),
+              notes: form.get('notes'),
+              tags: splitTags(form.get('tags')),
+              video_path: form.get('video_path'),
+            });
+            await loadRunDetail(runId);
+          });
+        }
+      }
+
       function lineageTable(parents, children) {
         const rows = [
           ...parents.map((edge) => ['parent', edge.parent_run_id, edge.relationship, edge.intended_change]),
@@ -334,6 +502,30 @@
       function formatTimestamp(value) {
         if (!value) return '';
         return new Date(value * 1000).toLocaleString();
+      }
+
+      function option(value, selected) {
+        const isSelected = value === selected ? ' selected' : '';
+        return `<option value="${escapeHtml(value)}"${isSelected}>${escapeHtml(value)}</option>`;
+      }
+
+      function splitTags(value) {
+        return String(value || '')
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+      }
+
+      async function postJson(url, payload) {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`);
+        }
+        return response.json();
       }
 
       function formatNumber(value) {

@@ -2,7 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rl_exp_dashboard.api import compare_runs_payload, metric_summaries_payload, remote_sources_payload, run_detail_payload
+from rl_exp_dashboard.api import (
+    compare_runs_payload,
+    metric_summaries_payload,
+    remote_sources_payload,
+    run_detail_payload,
+    save_checkpoint_review_payload,
+    save_run_observation_payload,
+)
 from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
 from rl_exp_dashboard.sync import RemoteSource
@@ -49,6 +56,21 @@ class ApiPayloadTests(unittest.TestCase):
     def test_run_detail_payload_combines_run_checkpoints_metrics_and_lineage(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))
+            store.upsert_run_observation(
+                run_id="group/child",
+                verdict="good",
+                summary="Good candidate.",
+                tags=["candidate"],
+                recommended_checkpoint="model_20.pt",
+            )
+            store.upsert_checkpoint_review(
+                run_id="group/child",
+                checkpoint="model_20.pt",
+                status="good",
+                notes="Stable in play.",
+                tags=["forward-walk"],
+                recommended=True,
+            )
 
             payload = run_detail_payload(store, "group/child")
 
@@ -57,6 +79,43 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["metrics"][0]["tag"], "Train/mean_reward")
         self.assertEqual(payload["parent_lineage"][0]["parent_run_id"], "group/parent")
         self.assertEqual(payload["child_lineage"], [])
+        self.assertEqual(payload["observation"]["verdict"], "good")
+        self.assertEqual(payload["checkpoint_reviews"][0]["checkpoint"], "model_20.pt")
+
+    def test_save_observation_and_checkpoint_review_payloads_persist_notes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+
+            observation_payload = save_run_observation_payload(
+                store,
+                {
+                    "run_id": "group/child",
+                    "verdict": "mixed",
+                    "summary": "Good flat, bad stairs.",
+                    "tags": ["good-rough", "bad-stairs"],
+                    "recommended_checkpoint": "model_20.pt",
+                },
+            )
+            review_payload = save_checkpoint_review_payload(
+                store,
+                {
+                    "run_id": "group/child",
+                    "checkpoint": "model_20.pt",
+                    "status": "mixed",
+                    "notes": "Needs stairs work.",
+                    "tags": ["bad-stairs"],
+                    "video_path": "videos/model_20.mp4",
+                    "score": 0.5,
+                    "recommended": False,
+                },
+            )
+
+            detail = run_detail_payload(store, "group/child")
+
+        self.assertEqual(observation_payload["observation"]["verdict"], "mixed")
+        self.assertEqual(review_payload["review"]["status"], "mixed")
+        self.assertEqual(detail["observation"]["tags"], ["good-rough", "bad-stairs"])
+        self.assertEqual(detail["checkpoint_reviews"][0]["video_path"], "videos/model_20.mp4")
 
     def test_compare_runs_payload_returns_config_diff_and_metric_delta(self):
         with tempfile.TemporaryDirectory() as tmp:

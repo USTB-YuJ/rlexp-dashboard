@@ -147,6 +147,24 @@
 - [x] **Step 7: Write failing tests for remote sources API payload.**
 - [x] **Step 8: Add `/api/remote-sources` payload support.**
 
+## Task 9: Manual Observation and Checkpoint Review
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing tests for run-level observation and checkpoint-level review persistence.**
+- [x] **Step 2: Add `run_observations` and `checkpoint_reviews` SQLite tables and repository methods.**
+- [x] **Step 3: Write failing tests for run detail payload and save helpers including observations/reviews.**
+- [x] **Step 4: Add observation and checkpoint review fields to run detail payload.**
+- [x] **Step 5: Add API helpers and POST routes for saving run observations and checkpoint reviews.**
+- [x] **Step 6: Write failing static dashboard test for observation/review UI.**
+- [x] **Step 7: Add manual observation and checkpoint review panels to the bundled dashboard shell.**
+
 ## Later Milestones
 
 - Sampled metric time-series storage for charts.
