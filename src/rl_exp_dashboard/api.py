@@ -76,7 +76,7 @@ def timeline_payload(store: DashboardStore, project: str | None = None) -> Dict[
     projects_by_name = {item["name"]: item for item in store.list_projects()}
     runs = sorted(
         store.list_runs(project),
-        key=lambda run: (float(run.get("modified_time") or 0.0), run["run_id"]),
+        key=lambda run: (float(run.get("start_time") or run.get("modified_time") or 0.0), run["run_id"]),
     )
     return {
         "project": project,
@@ -342,6 +342,7 @@ def lineage_overview_payload(store: DashboardStore, project: str | None = None) 
             "group": run["group"],
             "latest_checkpoint": run["latest_checkpoint"],
             "modified_time": run["modified_time"],
+            "start_time": run.get("start_time", 0.0),
         }
         for run in store.list_runs(project)
     ]
@@ -471,6 +472,7 @@ def _timeline_entry(store: DashboardStore, run: Dict[str, Any], project: Dict[st
         "name": run["name"],
         "group": run["group"],
         "modified_time": run["modified_time"],
+        "start_time": run.get("start_time", 0.0),
         "latest_checkpoint": run["latest_checkpoint"],
         "parent_run_id": parent_edge.get("parent_run_id") or run.get("parent_run_id"),
         "parent_checkpoint": parent_edge.get("parent_checkpoint") or run.get("parent_checkpoint"),

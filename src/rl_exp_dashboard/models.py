@@ -50,6 +50,7 @@ class RunRecord:
     group: str
     path: Path
     modified_time: float
+    start_time: float = 0.0
     task_name: str = ""
     algorithm_name: str = ""
     params: Dict[str, Any] = field(default_factory=dict)

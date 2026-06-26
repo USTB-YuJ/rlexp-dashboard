@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import re
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List
@@ -10,6 +11,9 @@ from .structured_loader import load_structured_file
 
 
 _CHECKPOINT_RE = re.compile(r"model_(\d+)\.pt$")
+_RUN_START_RE = re.compile(
+    r"(?P<date>\d{4}-\d{2}-\d{2})[_-](?P<hour>\d{2})-(?P<minute>\d{2})-(?P<second>\d{2})"
+)
 _VIDEO_SUFFIXES = {".mp4", ".mov", ".webm", ".avi", ".mkv"}
 _ARTIFACT_SUFFIXES = {".onnx", ".jit", ".pt2"}
 _PARAM_SUFFIXES = {".yaml", ".yml", ".json", ".toml"}
@@ -74,6 +78,7 @@ class LocalRunIndexer:
             group=group,
             path=run_dir,
             modified_time=run_dir.stat().st_mtime,
+            start_time=_infer_start_time(run_dir),
             task_name=task_name,
             algorithm_name=algorithm_name,
             params=params,
@@ -148,6 +153,20 @@ class LocalRunIndexer:
 def _checkpoint_sort_key(path: Path) -> int:
     match = _CHECKPOINT_RE.match(path.name)
     return int(match.group(1)) if match else -1
+
+
+def _infer_start_time(run_dir: Path) -> float:
+    match = _RUN_START_RE.search(run_dir.name)
+    if not match:
+        return 0.0
+    timestamp = (
+        f"{match.group('date')} "
+        f"{match.group('hour')}:{match.group('minute')}:{match.group('second')}"
+    )
+    try:
+        return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").timestamp()
+    except ValueError:
+        return 0.0
 
 
 def _infer_parent(params: Dict[str, Any], group: str) -> tuple[str | None, str | None]:

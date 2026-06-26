@@ -126,6 +126,7 @@ class ApiPayloadTests(unittest.TestCase):
 
         self.assertEqual([entry["run_id"] for entry in payload["entries"]], ["group/parent", "group/child"])
         child = payload["entries"][1]
+        self.assertEqual(child["start_time"], 200.0)
         self.assertEqual(child["parent_run_id"], "group/parent")
         self.assertEqual(child["parent_checkpoint"], "model_10.pt")
         self.assertEqual(child["relationship"], "finetune")
@@ -564,7 +565,8 @@ class ApiPayloadTests(unittest.TestCase):
                 name="parent",
                 group="group",
                 path=tmp_path / "parent",
-                modified_time=1.0,
+                modified_time=3.0,
+                start_time=100.0,
                 params={"agent": {"algorithm": {"entropy_coef": 0.01}}},
                 metric_summaries=[
                     MetricSummary(
@@ -595,6 +597,7 @@ class ApiPayloadTests(unittest.TestCase):
                 group="group",
                 path=tmp_path / "child",
                 modified_time=2.0,
+                start_time=200.0,
                 task_name="Unitree-G1-Depth-Parkour",
                 algorithm_name="rsl_rl_ppo",
                 params={"agent": {"algorithm": {"entropy_coef": 0.005}}},

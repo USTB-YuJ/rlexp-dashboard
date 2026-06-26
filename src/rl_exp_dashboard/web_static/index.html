@@ -286,12 +286,13 @@
               <th>Lineage</th>
               <th>Media</th>
               <th>Latest Checkpoint</th>
+              <th>Start</th>
               <th>Modified</th>
             </tr>
           </thead>
           <tbody id="run-table-body">
             <tr>
-              <td colspan="10" class="empty">Loading runs...</td>
+              <td colspan="11" class="empty">Loading runs...</td>
             </tr>
           </tbody>
         </table>
@@ -409,7 +410,7 @@
       runSort.addEventListener('change', renderFilteredRuns);
 
       async function loadRuns() {
-        runTableBody.innerHTML = `<tr><td colspan="10" class="empty">Loading runs...</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="11" class="empty">Loading runs...</td></tr>`;
         const response = await fetch('/api/runs');
         const payload = await response.json();
         renderRuns(payload.runs || []);
@@ -940,7 +941,7 @@
                 .map(
                   (entry) => `
                     <tr data-run-id="${escapeHtml(entry.run_id)}">
-                      <td>${formatTimestamp(entry.modified_time)}</td>
+                      <td>${formatTimestamp(entry.start_time || entry.modified_time)}</td>
                       <td>${escapeHtml(entry.run_id)}</td>
                       <td>${escapeHtml(formatTimelineParent(entry))}</td>
                       <td>${escapeHtml(entry.intended_change || '')}</td>
@@ -993,6 +994,7 @@
             run.recommended_checkpoint,
             formatRunLineage(run),
             formatRunMedia(run),
+            formatTimestamp(run.start_time),
           ]
             .join(' ')
             .toLowerCase();
@@ -1006,7 +1008,7 @@
         });
         runs = sortRuns(runs, runSort.value);
         if (runs.length === 0) {
-          runTableBody.innerHTML = `<tr><td colspan="10" class="empty">No runs match the current filters.</td></tr>`;
+          runTableBody.innerHTML = `<tr><td colspan="11" class="empty">No runs match the current filters.</td></tr>`;
           return;
         }
         runTableBody.innerHTML = runs
@@ -1022,6 +1024,7 @@
                 <td>${escapeHtml(formatRunLineage(run))}</td>
                 <td>${escapeHtml(formatRunMedia(run))}</td>
                 <td>${escapeHtml(run.latest_checkpoint || '')}</td>
+                <td>${formatTimestamp(run.start_time)}</td>
                 <td>${formatTimestamp(run.modified_time)}</td>
               </tr>
             `,
@@ -1133,6 +1136,7 @@
             ${field('Group', run.group)}
             ${field('Task Name', run.task_name || '')}
             ${field('Algorithm Name', run.algorithm_name || '')}
+            ${field('Start Time', run.start_time ? formatTimestamp(run.start_time) : '')}
             ${field('Path', run.path)}
             ${field('Latest Checkpoint', run.latest_checkpoint || '')}
           </div>
@@ -1713,7 +1717,7 @@
       }
 
       loadRuns().catch((error) => {
-        runTableBody.innerHTML = `<tr><td colspan="10" class="empty">${escapeHtml(error.message)}</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="11" class="empty">${escapeHtml(error.message)}</td></tr>`;
       });
       loadProjectConfigs().catch((error) => {
         projectConfigs.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;

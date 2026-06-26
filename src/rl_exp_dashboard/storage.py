@@ -59,6 +59,7 @@ class DashboardStore:
                     run_group text not null,
                     path text not null,
                     modified_time real not null,
+                    start_time real not null default 0,
                     task_name text not null default '',
                     algorithm_name text not null default '',
                     params_json text not null,
@@ -162,6 +163,7 @@ class DashboardStore:
             _ensure_column(conn, "runs", "git_json", "text not null default '{}'")
             _ensure_column(conn, "runs", "task_name", "text not null default ''")
             _ensure_column(conn, "runs", "algorithm_name", "text not null default ''")
+            _ensure_column(conn, "runs", "start_time", "real not null default 0")
             _ensure_column(conn, "lineage_edges", "confirmation_state", "text not null default 'confirmed'")
             _ensure_column(conn, "lineage_edges", "confidence_source", "text not null default 'manual'")
             _ensure_column(conn, "lineage_edges", "result_summary", "text not null default ''")
@@ -337,17 +339,18 @@ class DashboardStore:
             conn.execute(
                 """
                 insert into runs (
-                    run_id, project_name, name, run_group, path, modified_time,
+                    run_id, project_name, name, run_group, path, modified_time, start_time,
                     task_name, algorithm_name, params_json,
                     git_json, latest_checkpoint, parent_run_id, parent_checkpoint
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(run_id) do update set
                     project_name=excluded.project_name,
                     name=excluded.name,
                     run_group=excluded.run_group,
                     path=excluded.path,
                     modified_time=excluded.modified_time,
+                    start_time=excluded.start_time,
                     task_name=excluded.task_name,
                     algorithm_name=excluded.algorithm_name,
                     params_json=excluded.params_json,
@@ -363,6 +366,7 @@ class DashboardStore:
                     run.group,
                     str(run.path),
                     run.modified_time,
+                    run.start_time,
                     run.task_name,
                     run.algorithm_name,
                     json.dumps(run.params, sort_keys=True),
@@ -749,6 +753,7 @@ class DashboardStore:
             "group": row["run_group"],
             "path": row["path"],
             "modified_time": row["modified_time"],
+            "start_time": row["start_time"],
             "task_name": row["task_name"],
             "algorithm_name": row["algorithm_name"],
             "params": json.loads(row["params_json"]),

@@ -635,6 +635,25 @@
 - [x] **Step 3: Surface task/algorithm fields through API payloads and bundled dashboard table/detail views.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 43: Run Start Time Metadata
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/models.py`
+- Modify: `src/rl_exp_dashboard/indexer.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_indexer.py`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for parsing, storing, returning, sorting by, and rendering run `start_time`.**
+- [x] **Step 2: Extend `RunRecord`, indexer timestamp parsing, and SQLite run schema migration.**
+- [x] **Step 3: Use `start_time` in timeline payload ordering and dashboard table/detail/timeline display.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

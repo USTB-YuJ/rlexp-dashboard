@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 from rl_exp_dashboard.indexer import LocalRunIndexer
@@ -91,6 +92,7 @@ class LocalRunIndexerTests(unittest.TestCase):
         self.assertEqual(run.name, "2026-06-25_15-19-19")
         self.assertEqual(run.task_name, "Unitree-G1-Depth-Parkour")
         self.assertEqual(run.algorithm_name, "rsl_rl_ppo")
+        self.assertEqual(run.start_time, datetime(2026, 6, 25, 15, 19, 19).timestamp())
         self.assertEqual(run.params["env"]["scene"]["num_envs"], 2048)
         self.assertEqual(run.params["agent"]["algorithm"]["entropy_coef"], 0.005)
         self.assertEqual(run.params["runner"]["experiment_name"], "parkour")
