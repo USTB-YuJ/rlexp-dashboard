@@ -280,6 +280,16 @@
 
       <section class="wide-section">
         <div class="section-head">
+          <h2>Project Configs</h2>
+          <button type="button" id="refresh-project-configs">Refresh</button>
+        </div>
+        <div id="project-configs" class="detail">
+          <div class="empty">Loading project configs...</div>
+        </div>
+      </section>
+
+      <section class="wide-section">
+        <div class="section-head">
           <h2>Remote Sources</h2>
           <button type="button" id="refresh-remote-sources">Refresh</button>
         </div>
@@ -333,10 +343,12 @@
       const compareBeforeRun = document.getElementById('compare-before-run');
       const compareAfterRun = document.getElementById('compare-after-run');
       const compareResult = document.getElementById('compare-result');
+      const projectConfigs = document.getElementById('project-configs');
       const remoteSources = document.getElementById('remote-sources');
       const lineageOverview = document.getElementById('lineage-overview');
       let indexedRuns = [];
       document.getElementById('refresh-runs').addEventListener('click', loadRuns);
+      document.getElementById('refresh-project-configs').addEventListener('click', loadProjectConfigs);
       document.getElementById('refresh-remote-sources').addEventListener('click', loadRemoteSources);
       document.getElementById('refresh-lineage').addEventListener('click', loadLineageOverview);
       document.getElementById('compare-runs').addEventListener('click', loadCompareResult);
@@ -350,6 +362,50 @@
         const response = await fetch('/api/runs');
         const payload = await response.json();
         renderRuns(payload.runs || []);
+      }
+
+      async function loadProjectConfigs() {
+        projectConfigs.innerHTML = `<div class="empty">Loading project configs...</div>`;
+        const response = await fetch('/api/projects');
+        const payload = await response.json();
+        renderProjectConfigs(payload.projects || []);
+      }
+
+      function renderProjectConfigs(projects) {
+        if (projects.length === 0) {
+          projectConfigs.innerHTML = `<div class="empty">No project configs imported yet.</div>`;
+          return;
+        }
+        projectConfigs.innerHTML = `
+          <table aria-label="Project configs">
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Cache Root</th>
+                <th>Parser</th>
+                <th>Preferred Metrics</th>
+                <th>Log Patterns</th>
+                <th>Tags</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${projects
+                .map(
+                  (project) => `
+                    <tr>
+                      <td>${escapeHtml(project.name)}</td>
+                      <td>${escapeHtml(project.local_cache_root || '')}</td>
+                      <td>${escapeHtml(project.parser_profile || '')}</td>
+                      <td>${escapeHtml(joinList(project.preferred_metrics))}</td>
+                      <td>${escapeHtml(joinList(project.log_patterns))}</td>
+                      <td>${escapeHtml(joinList(project.tag_schema))}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
       }
 
       async function loadRemoteSources() {
@@ -1040,6 +1096,11 @@
         return String(value);
       }
 
+      function joinList(value) {
+        if (!value || value.length === 0) return '';
+        return value.join(', ');
+      }
+
       function escapeHtml(value) {
         return String(value)
           .replaceAll('&', '&amp;')
@@ -1051,6 +1112,9 @@
 
       loadRuns().catch((error) => {
         runTableBody.innerHTML = `<tr><td colspan="4" class="empty">${escapeHtml(error.message)}</td></tr>`;
+      });
+      loadProjectConfigs().catch((error) => {
+        projectConfigs.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
       });
       loadRemoteSources().catch((error) => {
         remoteSources.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;

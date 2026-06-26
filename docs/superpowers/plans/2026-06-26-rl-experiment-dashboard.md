@@ -349,6 +349,18 @@
 - [x] **Step 4: Add `project import --config ... --db ...` CLI command.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 23: Bundled Project Config Panel
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for a project config panel using `/api/projects`.**
+- [x] **Step 2: Add a dashboard panel showing project cache roots, parser profiles, preferred metrics, and tag schemas.**
+- [x] **Step 3: Load project metadata on page load and via refresh.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
