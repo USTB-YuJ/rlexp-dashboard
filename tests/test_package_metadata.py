@@ -11,6 +11,10 @@ class PackageMetadataTests(unittest.TestCase):
     def test_readme_documents_open_source_local_deployment_flow(self):
         readme = Path("README.md").read_text(encoding="utf-8")
 
+        self.assertIn("中文快速开始", readme)
+        self.assertIn("本地开发安装", readme)
+        self.assertIn("远端同步", readme)
+        self.assertIn("界面语言切换", readme)
         self.assertIn("pip install rl-exp-dashboard", readme)
         self.assertIn("rl-exp-dashboard serve --workspace ~/rl-exp-dashboard", readme)
         self.assertIn("rl-exp-dashboard sync", readme)

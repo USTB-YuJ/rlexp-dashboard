@@ -38,6 +38,11 @@
       .project-scope-control {
         min-width: 220px;
       }
+      .header-controls {
+        display: flex;
+        align-items: end;
+        gap: 12px;
+      }
       h1 {
         font-size: 22px;
         margin: 0;
@@ -305,6 +310,10 @@
           align-items: stretch;
           flex-direction: column;
         }
+        .header-controls {
+          align-items: stretch;
+          flex-direction: column;
+        }
         .project-scope-control {
           min-width: 0;
         }
@@ -315,57 +324,66 @@
     <header>
       <div class="header-row">
         <div>
-          <h1>RL Experiment Dashboard</h1>
-          <div class="muted">Local run index, metric summaries, checkpoints, and lineage.</div>
+          <h1 data-i18n="dashboardTitle">RL Experiment Dashboard</h1>
+          <div class="muted" data-i18n="dashboardSubtitle">Local run index, metric summaries, checkpoints, and lineage.</div>
         </div>
-        <label class="project-scope-control">
-          <div class="label">Project scope</div>
-          <select id="project-scope">
-            <option value="">All projects</option>
-          </select>
-        </label>
+        <div class="header-controls">
+          <label class="project-scope-control">
+            <div class="label" data-i18n="projectScope">Project scope</div>
+            <select id="project-scope">
+              <option value="" data-i18n="allProjects">All projects</option>
+            </select>
+          </label>
+          <label class="project-scope-control">
+            <div class="label" data-i18n="language">Language</div>
+            <select id="language-select">
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+            </select>
+          </label>
+        </div>
       </div>
     </header>
 
     <main>
       <section>
         <div class="section-head">
-          <h2>Runs</h2>
-          <button type="button" id="refresh-runs">Refresh</button>
+          <h2 data-i18n="runs">Runs</h2>
+          <button type="button" id="refresh-runs" data-i18n="refresh">Refresh</button>
         </div>
         <div class="table-controls">
           <label>
-            <div class="label">Search</div>
+            <div class="label" data-i18n="search">Search</div>
             <input id="run-search" placeholder="Run, project, checkpoint, verdict" />
           </label>
           <label>
-            <div class="label">Project</div>
+            <div class="label" data-i18n="project">Project</div>
             <select id="project-filter"></select>
           </label>
           <label>
-            <div class="label">Group</div>
+            <div class="label" data-i18n="group">Group</div>
             <select id="group-filter"></select>
           </label>
           <label>
-            <div class="label">Task</div>
+            <div class="label" data-i18n="task">Task</div>
             <select id="task-filter"></select>
           </label>
           <label>
-            <div class="label">Git</div>
+            <div class="label" data-i18n="git">Git</div>
             <input id="git-filter" placeholder="commit or branch" />
           </label>
           <label>
-            <div class="label">Start from</div>
+            <div class="label" data-i18n="startFrom">Start from</div>
             <input id="start-date-from" type="date" />
           </label>
           <label>
-            <div class="label">Start to</div>
+            <div class="label" data-i18n="startTo">Start to</div>
             <input id="start-date-to" type="date" />
           </label>
           <label>
-            <div class="label">Review</div>
+            <div class="label" data-i18n="review">Review</div>
             <select id="review-filter">
-              <option value="">All reviews</option>
+              <option value="" data-i18n="allReviews">All reviews</option>
               <option value="unreviewed">unreviewed</option>
               <option value="good">good</option>
               <option value="mixed">mixed</option>
@@ -374,15 +392,15 @@
             </select>
           </label>
           <label>
-            <div class="label">Tag</div>
+            <div class="label" data-i18n="tag">Tag</div>
             <select id="tag-filter">
-              <option value="">All tags</option>
+              <option value="" data-i18n="allTags">All tags</option>
             </select>
           </label>
           <label>
-            <div class="label">Flags</div>
+            <div class="label" data-i18n="flags">Flags</div>
             <select id="flag-filter">
-              <option value="">All flags</option>
+              <option value="" data-i18n="allFlags">All flags</option>
               <option value="has-observation">Has notes</option>
               <option value="has-reviewed-checkpoint">Reviewed checkpoint</option>
               <option value="has-video">Has video</option>
@@ -392,7 +410,7 @@
             </select>
           </label>
           <label>
-            <div class="label">Sort</div>
+            <div class="label" data-i18n="sort">Sort</div>
             <select id="run-sort">
               <option value="modified-desc">Modified newest</option>
               <option value="modified-asc">Modified oldest</option>
@@ -404,23 +422,23 @@
         <table id="run-table" aria-label="Indexed runs">
           <thead>
             <tr>
-              <th>Run</th>
-              <th>Project</th>
-              <th>Task</th>
-              <th>Algorithm</th>
-              <th>Reward</th>
-              <th>Review</th>
-              <th>Tags</th>
-              <th>Lineage</th>
-              <th>Media</th>
-              <th>Latest Checkpoint</th>
-              <th>Start</th>
-              <th>Modified</th>
+              <th data-i18n="run">Run</th>
+              <th data-i18n="project">Project</th>
+              <th data-i18n="task">Task</th>
+              <th data-i18n="algorithm">Algorithm</th>
+              <th data-i18n="reward">Reward</th>
+              <th data-i18n="review">Review</th>
+              <th data-i18n="tags">Tags</th>
+              <th data-i18n="lineage">Lineage</th>
+              <th data-i18n="media">Media</th>
+              <th data-i18n="latestCheckpoint">Latest Checkpoint</th>
+              <th data-i18n="start">Start</th>
+              <th data-i18n="modified">Modified</th>
             </tr>
           </thead>
           <tbody id="run-table-body">
             <tr>
-              <td colspan="12" class="empty">Loading runs...</td>
+              <td colspan="12" class="empty" data-i18n="loadingRuns">Loading runs...</td>
             </tr>
           </tbody>
         </table>
@@ -428,73 +446,73 @@
 
       <section>
         <div class="section-head">
-          <h2>Run Detail</h2>
-          <span id="selected-run" class="muted">No run selected</span>
+          <h2 data-i18n="runDetail">Run Detail</h2>
+          <span id="selected-run" class="muted" data-i18n="noRunSelected">No run selected</span>
         </div>
         <div id="run-detail" class="detail">
-          <div class="empty">Select a run to inspect metrics, checkpoints, and lineage.</div>
+          <div class="empty" data-i18n="selectRunDetail">Select a run to inspect metrics, checkpoints, and lineage.</div>
         </div>
       </section>
 
       <section class="wide-section">
         <div class="section-head">
-          <h2>Project Configs</h2>
-          <button type="button" id="refresh-project-configs">Refresh</button>
+          <h2 data-i18n="projectConfigs">Project Configs</h2>
+          <button type="button" id="refresh-project-configs" data-i18n="refresh">Refresh</button>
         </div>
         <div id="project-configs" class="detail">
-          <div class="empty">Loading project configs...</div>
+          <div class="empty" data-i18n="loadingProjectConfigs">Loading project configs...</div>
         </div>
       </section>
 
       <section class="wide-section">
         <div class="section-head">
-          <h2>Remote Sources</h2>
-          <button type="button" id="refresh-remote-sources">Refresh</button>
+          <h2 data-i18n="remoteSources">Remote Sources</h2>
+          <button type="button" id="refresh-remote-sources" data-i18n="refresh">Refresh</button>
         </div>
         <div id="remote-sources" class="detail">
-          <div class="empty">Loading remote sources...</div>
+          <div class="empty" data-i18n="loadingRemoteSources">Loading remote sources...</div>
         </div>
       </section>
 
       <section class="wide-section">
         <div class="section-head">
-          <h2>Lineage Overview</h2>
-          <button type="button" id="refresh-lineage">Refresh</button>
+          <h2 data-i18n="lineageOverview">Lineage Overview</h2>
+          <button type="button" id="refresh-lineage" data-i18n="refresh">Refresh</button>
         </div>
         <div id="lineage-overview" class="detail">
-          <div class="empty">Loading lineage...</div>
+          <div class="empty" data-i18n="loadingLineage">Loading lineage...</div>
         </div>
       </section>
 
       <section class="wide-section">
         <div class="section-head">
-          <h2>Experiment Timeline</h2>
-          <button type="button" id="refresh-timeline">Refresh</button>
+          <h2 data-i18n="experimentTimeline">Experiment Timeline</h2>
+          <button type="button" id="refresh-timeline" data-i18n="refresh">Refresh</button>
         </div>
         <div id="timeline-overview" class="detail">
-          <div class="empty">Loading timeline...</div>
+          <div class="empty" data-i18n="loadingTimeline">Loading timeline...</div>
         </div>
       </section>
 
       <section class="wide-section">
         <div class="section-head">
-          <h2>Compare Runs</h2>
-          <span class="muted">Config Diffs and Metric Deltas</span>
+          <h2 data-i18n="compareRuns">Compare Runs</h2>
+          <span class="muted" data-i18n="compareSubtitle">Config Diffs and Metric Deltas</span>
         </div>
         <div class="detail">
           <div class="compare-controls">
             <label>
-              <div class="label">Baseline</div>
+              <div class="label" data-i18n="baseline">Baseline</div>
               <select id="compare-before-run"></select>
             </label>
             <label>
-              <div class="label">Target</div>
+              <div class="label" data-i18n="target">Target</div>
               <select id="compare-after-run"></select>
             </label>
-            <button type="button" id="compare-runs">Compare</button>
+            <button type="button" id="compare-runs" data-i18n="compare">Compare</button>
           </div>
           <div id="compare-result" class="detail">
-            <div class="empty">Select two runs to compare config changes and metric deltas.</div>
+            <div class="empty" data-i18n="selectTwoRuns">Select two runs to compare config changes and metric deltas.</div>
           </div>
         </div>
       </section>
@@ -506,6 +524,7 @@
       const selectedRun = document.getElementById('selected-run');
       const runSearch = document.getElementById('run-search');
       const projectScope = document.getElementById('project-scope');
+      const languageSelect = document.getElementById('language-select');
       const projectFilter = document.getElementById('project-filter');
       const groupFilter = document.getElementById('group-filter');
       const taskFilter = document.getElementById('task-filter');
@@ -523,6 +542,178 @@
       const remoteSources = document.getElementById('remote-sources');
       const lineageOverview = document.getElementById('lineage-overview');
       const timelineOverview = document.getElementById('timeline-overview');
+      const translations = {
+        en: {
+          dashboardTitle: 'RL Experiment Dashboard',
+          dashboardSubtitle: 'Local run index, metric summaries, checkpoints, and lineage.',
+          language: 'Language',
+          projectScope: 'Project scope',
+          allProjects: 'All projects',
+          runs: 'Runs',
+          refresh: 'Refresh',
+          search: 'Search',
+          project: 'Project',
+          group: 'Group',
+          task: 'Task',
+          git: 'Git',
+          startFrom: 'Start from',
+          startTo: 'Start to',
+          review: 'Review',
+          allReviews: 'All reviews',
+          tag: 'Tag',
+          allTags: 'All tags',
+          flags: 'Flags',
+          allFlags: 'All flags',
+          sort: 'Sort',
+          run: 'Run',
+          algorithm: 'Algorithm',
+          reward: 'Reward',
+          tags: 'Tags',
+          lineage: 'Lineage',
+          media: 'Media',
+          latestCheckpoint: 'Latest Checkpoint',
+          start: 'Start',
+          modified: 'Modified',
+          loadingRuns: 'Loading runs...',
+          runDetail: 'Run Detail',
+          noRunSelected: 'No run selected',
+          selectRunDetail: 'Select a run to inspect metrics, checkpoints, and lineage.',
+          projectConfigs: 'Project Configs',
+          loadingProjectConfigs: 'Loading project configs...',
+          remoteSources: 'Remote Sources',
+          loadingRemoteSources: 'Loading remote sources...',
+          lineageOverview: 'Lineage Overview',
+          loadingLineage: 'Loading lineage...',
+          experimentTimeline: 'Experiment Timeline',
+          loadingTimeline: 'Loading timeline...',
+          compareRuns: 'Compare Runs',
+          compareSubtitle: 'Config Diffs and Metric Deltas',
+          baseline: 'Baseline',
+          target: 'Target',
+          compare: 'Compare',
+          selectTwoRuns: 'Select two runs to compare config changes and metric deltas.',
+          noProjectConfigs: 'No project configs imported yet.',
+          createUpdateProject: 'Create / Update Project',
+          projectName: 'Project name',
+          localCacheRoot: 'Local cache root',
+          parserProfile: 'Parser profile',
+          preferredMetrics: 'Preferred metrics',
+          logPatterns: 'Log patterns',
+          saveProject: 'Save Project',
+          indexProjectLogs: 'Index Project Logs',
+          logRoot: 'Log root',
+          indexLogs: 'Index Logs',
+          noRemoteSources: 'No remote sources configured.',
+          createUpdateRemoteSource: 'Create / Update Remote Source',
+          name: 'Name',
+          host: 'Host',
+          user: 'User',
+          port: 'Port',
+          method: 'Method',
+          remoteLogRoot: 'Remote log root',
+          includePatterns: 'Include Patterns',
+          excludePatterns: 'Exclude Patterns',
+          saveRemoteSource: 'Save Remote Source',
+          syncRemoteSource: 'Sync Remote Source',
+          sourceName: 'Source name',
+          cacheRootOverride: 'Cache root override',
+          includeVideos: 'Include videos',
+          includeCheckpoints: 'Include checkpoints',
+          dryRun: 'Dry run',
+          sync: 'Sync',
+          cacheRoot: 'Cache Root',
+          parser: 'Parser',
+          remoteRoot: 'Remote Root',
+          lastSync: 'Last Sync',
+          localPath: 'Local Path',
+          never: 'never',
+        },
+        zh: {
+          dashboardTitle: '强化学习实验看板',
+          dashboardSubtitle: '本地索引训练日志、指标摘要、checkpoint 和实验 lineage。',
+          language: '语言',
+          projectScope: '项目范围',
+          allProjects: '全部项目',
+          runs: '训练记录',
+          refresh: '刷新',
+          search: '搜索',
+          project: '项目',
+          group: '分组',
+          task: '任务',
+          git: 'Git',
+          startFrom: '开始日期从',
+          startTo: '开始日期到',
+          review: '评价',
+          allReviews: '全部评价',
+          tag: '标签',
+          allTags: '全部标签',
+          flags: '筛选标记',
+          allFlags: '全部标记',
+          sort: '排序',
+          run: '训练记录',
+          algorithm: '算法',
+          reward: '奖励',
+          tags: '标签',
+          lineage: '继承关系',
+          media: '媒体',
+          latestCheckpoint: '最新 checkpoint',
+          start: '开始',
+          modified: '修改时间',
+          loadingRuns: '正在加载训练记录...',
+          runDetail: '训练详情',
+          noRunSelected: '未选择训练记录',
+          selectRunDetail: '选择一个 run 查看指标、checkpoint 和 lineage。',
+          projectConfigs: '项目配置',
+          loadingProjectConfigs: '正在加载项目配置...',
+          remoteSources: '远端来源',
+          loadingRemoteSources: '正在加载远端来源...',
+          lineageOverview: 'Lineage 总览',
+          loadingLineage: '正在加载 lineage...',
+          experimentTimeline: '实验时间线',
+          loadingTimeline: '正在加载时间线...',
+          compareRuns: '对比训练',
+          compareSubtitle: '配置差异和指标变化',
+          baseline: '基线',
+          target: '目标',
+          compare: '对比',
+          selectTwoRuns: '选择两个 run 来对比配置变化和指标差异。',
+          noProjectConfigs: '还没有导入项目配置。',
+          createUpdateProject: '创建 / 更新项目',
+          projectName: '项目名称',
+          localCacheRoot: '本地缓存目录',
+          parserProfile: '解析 profile',
+          preferredMetrics: '重点指标',
+          logPatterns: '日志匹配规则',
+          saveProject: '保存项目',
+          indexProjectLogs: '索引项目日志',
+          logRoot: '日志根目录',
+          indexLogs: '索引日志',
+          noRemoteSources: '还没有配置远端来源。',
+          createUpdateRemoteSource: '创建 / 更新远端来源',
+          name: '名称',
+          host: '主机',
+          user: '用户',
+          port: '端口',
+          method: '同步方式',
+          remoteLogRoot: '远端日志根目录',
+          includePatterns: '包含规则',
+          excludePatterns: '排除规则',
+          saveRemoteSource: '保存远端来源',
+          syncRemoteSource: '同步远端来源',
+          sourceName: '来源名称',
+          cacheRootOverride: '覆盖缓存目录',
+          includeVideos: '包含视频',
+          includeCheckpoints: '包含 checkpoint',
+          dryRun: '只预览',
+          sync: '同步',
+          cacheRoot: '缓存目录',
+          parser: '解析器',
+          remoteRoot: '远端目录',
+          lastSync: '最近同步',
+          localPath: '本地路径',
+          never: '从未同步',
+        },
+      };
       const defaultConfigDiffGroups = [
         { key: 'rewards', title: 'Reward Diffs' },
         { key: 'commands', title: 'Command Diffs' },
@@ -541,6 +732,7 @@
       document.getElementById('refresh-timeline').addEventListener('click', loadTimeline);
       document.getElementById('compare-runs').addEventListener('click', loadCompareResult);
       projectScope.addEventListener('change', handleProjectScopeChange);
+      languageSelect.addEventListener('change', () => setLanguage(languageSelect.value));
       runSearch.addEventListener('input', renderFilteredRuns);
       projectFilter.addEventListener('change', renderFilteredRuns);
       groupFilter.addEventListener('change', renderFilteredRuns);
@@ -553,15 +745,43 @@
       flagFilter.addEventListener('change', renderFilteredRuns);
       runSort.addEventListener('change', renderFilteredRuns);
 
+      function setLanguage(language, reloadDynamic = true) {
+        const nextLanguage = translations[language] ? language : 'en';
+        languageSelect.value = nextLanguage;
+        localStorage.setItem('dashboardLanguage', nextLanguage);
+        document.documentElement.lang = nextLanguage === 'zh' ? 'zh-CN' : 'en';
+        applyTranslations();
+        renderFilteredRuns();
+        if (reloadDynamic) {
+          loadProjectConfigs().catch((error) => {
+            projectConfigs.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+          });
+          loadRemoteSources().catch((error) => {
+            remoteSources.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+          });
+        }
+      }
+
+      function t(key) {
+        const language = languageSelect.value || 'en';
+        return translations[language]?.[key] || translations.en[key] || key;
+      }
+
+      function applyTranslations() {
+        for (const element of document.querySelectorAll('[data-i18n]')) {
+          element.textContent = t(element.dataset.i18n);
+        }
+      }
+
       async function loadRuns() {
-        runTableBody.innerHTML = `<tr><td colspan="12" class="empty">Loading runs...</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="12" class="empty">${t('loadingRuns')}</td></tr>`;
         const response = await fetch(scopedUrl('/api/runs'));
         const payload = await response.json();
         renderRuns(payload.runs || []);
       }
 
       async function loadProjectConfigs() {
-        projectConfigs.innerHTML = `<div class="empty">Loading project configs...</div>`;
+        projectConfigs.innerHTML = `<div class="empty">${t('loadingProjectConfigs')}</div>`;
         const response = await fetch('/api/projects');
         const payload = await response.json();
         populateProjectScope(payload.projects || []);
@@ -571,7 +791,7 @@
       function populateProjectScope(projects) {
         const selected = projectScope.value;
         projectScope.innerHTML = `
-          <option value="">All projects</option>
+          <option value="">${t('allProjects')}</option>
           ${projects.map((project) => option(project.name, selected)).join('')}
         `;
         if (selected && projects.some((project) => project.name === selected)) {
@@ -598,16 +818,16 @@
       function renderProjectConfigs(projects) {
         const projectRows =
           projects.length === 0
-            ? `<div class="empty">No project configs imported yet.</div>`
+            ? `<div class="empty">${t('noProjectConfigs')}</div>`
             : `<table aria-label="Project configs">
                 <thead>
                   <tr>
-                    <th>Project</th>
-                    <th>Cache Root</th>
-                    <th>Parser</th>
-                    <th>Preferred Metrics</th>
-                    <th>Log Patterns</th>
-                    <th>Tags</th>
+                    <th>${t('project')}</th>
+                    <th>${t('cacheRoot')}</th>
+                    <th>${t('parser')}</th>
+                    <th>${t('preferredMetrics')}</th>
+                    <th>${t('logPatterns')}</th>
+                    <th>${t('tags')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -638,40 +858,40 @@
 
       function projectForm(project) {
         return `
-          <h3 class="subhead">Create / Update Project</h3>
+          <h3 class="subhead">${t('createUpdateProject')}</h3>
           <form id="project-form">
             <div class="form-row">
               <label>
-                <div class="label">Project name</div>
+                <div class="label">${t('projectName')}</div>
                 <input name="name" value="${escapeHtml(project.name || '')}" required />
               </label>
               <label>
-                <div class="label">Local cache root</div>
+                <div class="label">${t('localCacheRoot')}</div>
                 <input name="local_cache_root" value="${escapeHtml(project.local_cache_root || '')}" required />
               </label>
             </div>
             <div class="form-row">
               <label>
-                <div class="label">Parser profile</div>
+                <div class="label">${t('parserProfile')}</div>
                 <input name="parser_profile" value="${escapeHtml(project.parser_profile || 'generic_tensorboard')}" />
               </label>
               <label>
-                <div class="label">Preferred metrics</div>
+                <div class="label">${t('preferredMetrics')}</div>
                 <input name="preferred_metrics" value="${escapeHtml(joinList(project.preferred_metrics))}" />
               </label>
             </div>
             <div class="form-row">
               <label>
-                <div class="label">Log patterns</div>
+                <div class="label">${t('logPatterns')}</div>
                 <input name="log_patterns" value="${escapeHtml(joinList(project.log_patterns))}" />
               </label>
               <label>
-                <div class="label">Tags</div>
+                <div class="label">${t('tags')}</div>
                 <input name="tag_schema" value="${escapeHtml(joinList(project.tag_schema))}" />
               </label>
             </div>
             <div class="form-actions">
-              <button type="submit">Save Project</button>
+              <button type="submit">${t('saveProject')}</button>
             </div>
           </form>
         `;
@@ -700,20 +920,20 @@
 
       function projectIndexForm(project) {
         return `
-          <h3 class="subhead">Index Project Logs</h3>
+          <h3 class="subhead">${t('indexProjectLogs')}</h3>
           <form id="project-index-form">
             <div class="form-row">
               <label>
-                <div class="label">Project name</div>
+                <div class="label">${t('projectName')}</div>
                 <input name="project" value="${escapeHtml(project.name || '')}" required />
               </label>
               <label>
-                <div class="label">Log root</div>
+                <div class="label">${t('logRoot')}</div>
                 <input name="log_root" value="${escapeHtml(project.local_cache_root || '')}" />
               </label>
             </div>
             <div class="form-actions">
-              <button type="submit">Index Logs</button>
+              <button type="submit">${t('indexLogs')}</button>
             </div>
           </form>
         `;
@@ -737,7 +957,7 @@
       }
 
       async function loadRemoteSources() {
-        remoteSources.innerHTML = `<div class="empty">Loading remote sources...</div>`;
+        remoteSources.innerHTML = `<div class="empty">${t('loadingRemoteSources')}</div>`;
         const response = await fetch(scopedUrl('/api/remote-sources'));
         const payload = await response.json();
         renderRemoteSources(payload.sources || []);
@@ -746,19 +966,19 @@
       function renderRemoteSources(sources) {
         const sourceRows =
           sources.length === 0
-            ? `<div class="empty">No remote sources configured.</div>`
+            ? `<div class="empty">${t('noRemoteSources')}</div>`
             : `<table aria-label="Remote sync sources">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Project</th>
-                    <th>Host</th>
-                    <th>Method</th>
-                    <th>Remote Root</th>
-                    <th>Include Patterns</th>
-                    <th>Exclude Patterns</th>
-                    <th>Last Sync</th>
-                    <th>Local Path</th>
+                    <th>${t('name')}</th>
+                    <th>${t('project')}</th>
+                    <th>${t('host')}</th>
+                    <th>${t('method')}</th>
+                    <th>${t('remoteRoot')}</th>
+                    <th>${t('includePatterns')}</th>
+                    <th>${t('excludePatterns')}</th>
+                    <th>${t('lastSync')}</th>
+                    <th>${t('localPath')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -767,7 +987,7 @@
                       const latest = source.latest_sync || {};
                       const lastSync = latest.status
                         ? `${escapeHtml(latest.status)}<br><span class="muted">${formatTimestamp(latest.created_at)}</span>`
-                        : '<span class="muted">never</span>';
+                        : `<span class="muted">${t('never')}</span>`;
                       return `
                         <tr>
                           <td>${escapeHtml(source.name)}</td>
@@ -796,35 +1016,35 @@
 
       function remoteSourceForm(source) {
         return `
-          <h3 class="subhead">Create / Update Remote Source</h3>
+          <h3 class="subhead">${t('createUpdateRemoteSource')}</h3>
           <form id="remote-source-form">
             <div class="form-row">
               <label>
-                <div class="label">Name</div>
+                <div class="label">${t('name')}</div>
                 <input name="name" value="${escapeHtml(source.name || '')}" required />
               </label>
               <label>
-                <div class="label">Project</div>
+                <div class="label">${t('project')}</div>
                 <input name="project" value="${escapeHtml(source.project || '')}" required />
               </label>
             </div>
             <div class="form-row">
               <label>
-                <div class="label">Host</div>
+                <div class="label">${t('host')}</div>
                 <input name="host" value="${escapeHtml(source.host || '')}" required />
               </label>
               <label>
-                <div class="label">User</div>
+                <div class="label">${t('user')}</div>
                 <input name="user" value="${escapeHtml(source.user || '')}" required />
               </label>
             </div>
             <div class="form-row">
               <label>
-                <div class="label">Port</div>
+                <div class="label">${t('port')}</div>
                 <input name="port" value="${escapeHtml(source.port || 22)}" />
               </label>
               <label>
-                <div class="label">Method</div>
+                <div class="label">${t('method')}</div>
                 <select name="method">
                   ${option('rsync', source.method || 'rsync')}
                   ${option('scp', source.method)}
@@ -833,21 +1053,21 @@
               </label>
             </div>
             <label>
-              <div class="label">Remote log root</div>
+              <div class="label">${t('remoteLogRoot')}</div>
               <input name="remote_log_root" value="${escapeHtml(source.remote_log_root || '')}" required />
             </label>
             <div class="form-row">
               <label>
-                <div class="label">Include Patterns</div>
+                <div class="label">${t('includePatterns')}</div>
                 <input name="include_patterns" value="${escapeHtml(joinList(source.include_patterns))}" />
               </label>
               <label>
-                <div class="label">Exclude Patterns</div>
+                <div class="label">${t('excludePatterns')}</div>
                 <input name="exclude_patterns" value="${escapeHtml(joinList(source.exclude_patterns))}" />
               </label>
             </div>
             <div class="form-actions">
-              <button type="submit">Save Remote Source</button>
+              <button type="submit">${t('saveRemoteSource')}</button>
             </div>
           </form>
         `;
@@ -879,25 +1099,25 @@
 
       function remoteSyncForm(source) {
         return `
-          <h3 class="subhead">Sync Remote Source</h3>
+          <h3 class="subhead">${t('syncRemoteSource')}</h3>
           <form id="remote-sync-form">
             <div class="form-row">
               <label>
-                <div class="label">Project</div>
+                <div class="label">${t('project')}</div>
                 <input name="project" value="${escapeHtml(source.project || '')}" required />
               </label>
               <label>
-                <div class="label">Source name</div>
+                <div class="label">${t('sourceName')}</div>
                 <input name="source_name" value="${escapeHtml(source.name || '')}" required />
               </label>
             </div>
             <div class="form-row">
               <label>
-                <div class="label">Cache root override</div>
+                <div class="label">${t('cacheRootOverride')}</div>
                 <input name="cache_root" />
               </label>
               <label>
-                <div class="label">Include videos</div>
+                <div class="label">${t('includeVideos')}</div>
                 <select name="include_videos">
                   ${option('false', 'false')}
                   ${option('true', 'false')}
@@ -906,7 +1126,7 @@
             </div>
             <div class="form-row">
               <label>
-                <div class="label">Include checkpoints</div>
+                <div class="label">${t('includeCheckpoints')}</div>
                 <select name="include_checkpoints">
                   ${option('false', 'false')}
                   ${option('true', 'false')}
@@ -915,10 +1135,10 @@
             </div>
             <label>
               <input type="checkbox" name="dry_run" checked />
-              Dry run
+              ${t('dryRun')}
             </label>
             <div class="form-actions">
-              <button type="submit">Sync Source</button>
+              <button type="submit">${t('sync')}</button>
             </div>
           </form>
         `;
@@ -945,7 +1165,7 @@
       }
 
       async function loadLineageOverview() {
-        lineageOverview.innerHTML = `<div class="empty">Loading lineage...</div>`;
+        lineageOverview.innerHTML = `<div class="empty">${t('loadingLineage')}</div>`;
         const response = await fetch(scopedUrl('/api/lineage'));
         const payload = await response.json();
         renderLineageOverview(payload);
@@ -1230,7 +1450,7 @@
       }
 
       async function loadTimeline() {
-        timelineOverview.innerHTML = `<div class="empty">Loading timeline...</div>`;
+        timelineOverview.innerHTML = `<div class="empty">${t('loadingTimeline')}</div>`;
         const response = await fetch(scopedUrl('/api/timeline'));
         const payload = await response.json();
         renderTimeline(payload.entries || []);
@@ -2429,6 +2649,8 @@
           .replaceAll('"', '&quot;')
           .replaceAll("'", '&#039;');
       }
+
+      setLanguage(localStorage.getItem('dashboardLanguage') || 'en', false);
 
       loadRuns().catch((error) => {
         runTableBody.innerHTML = `<tr><td colspan="12" class="empty">${escapeHtml(error.message)}</td></tr>`;
