@@ -217,6 +217,8 @@ class CliTests(unittest.TestCase):
                     remote_log_root="/remote/logs/rsl_rl",
                     project="unitree_rl_mjlab",
                     method="rsync",
+                    include_patterns=("params/***", "exports/***"),
+                    exclude_patterns=("videos/***", "wandb/***"),
                 )
             )
             output = StringIO()
@@ -239,6 +241,8 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertIn("eai@example.com:/remote/logs/rsl_rl/", output.getvalue())
+        self.assertIn("--include=exports/***", output.getvalue())
+        self.assertIn("--exclude=wandb/***", output.getvalue())
         self.assertEqual(status["local_path"], str(cache_root / "x-server" / "unitree_rl_mjlab" / "logs" / "rsl_rl"))
 
     def test_sync_command_executes_non_dry_run_with_injected_runner(self):

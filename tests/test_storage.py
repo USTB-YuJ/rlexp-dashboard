@@ -186,6 +186,8 @@ class DashboardStoreTests(unittest.TestCase):
                     remote_log_root="/logs/rsl_rl",
                     project="project",
                     method="rsync",
+                    include_patterns=("params/***", "events.out.tfevents*"),
+                    exclude_patterns=("videos/***", "tmp/***"),
                 )
             )
             store.record_sync_status(
@@ -203,6 +205,8 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(sources[0]["name"], "x-server")
         self.assertEqual(sources[0]["port"], 2222)
         self.assertEqual(sources[0]["remote_log_root"], "/logs/rsl_rl")
+        self.assertEqual(sources[0]["include_patterns"], ["params/***", "events.out.tfevents*"])
+        self.assertEqual(sources[0]["exclude_patterns"], ["videos/***", "tmp/***"])
         self.assertEqual(status["status"], "dry-run")
         self.assertEqual(status["command"], ["rsync", "--dry-run"])
         self.assertEqual(status["message"], "preview only")

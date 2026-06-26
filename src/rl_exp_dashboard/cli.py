@@ -198,6 +198,8 @@ def _resolve_remote_source(store: DashboardStore, args: argparse.Namespace) -> R
         remote_log_root=str(remote_log_root),
         project=args.project,
         method=str(args.method or (imported_source or {}).get("method", "rsync")),
+        include_patterns=tuple((imported_source or {}).get("include_patterns", [])),
+        exclude_patterns=tuple((imported_source or {}).get("exclude_patterns", [])),
     )
 
 

@@ -374,6 +374,24 @@
 - [x] **Step 4: Preserve explicit CLI args as overrides for imported config values.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 25: Remote Source Sync Pattern Persistence
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_cli.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for persisting and displaying remote source include/exclude sync patterns.**
+- [x] **Step 2: Add SQLite columns and migration for remote source include/exclude patterns.**
+- [x] **Step 3: Preserve include/exclude patterns when CLI sync reuses an imported remote source.**
+- [x] **Step 4: Render include/exclude patterns in the bundled Remote Sources panel.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

@@ -36,6 +36,8 @@ class DashboardStore:
                     port integer not null,
                     remote_log_root text not null,
                     method text not null,
+                    include_patterns_json text not null default '[]',
+                    exclude_patterns_json text not null default '[]',
                     primary key (name, project_name)
                 );
 
@@ -149,6 +151,8 @@ class DashboardStore:
             _ensure_column(conn, "projects", "preferred_metrics_json", "text not null default '[]'")
             _ensure_column(conn, "projects", "log_patterns_json", "text not null default '[]'")
             _ensure_column(conn, "projects", "tag_schema_json", "text not null default '[]'")
+            _ensure_column(conn, "remote_sources", "include_patterns_json", "text not null default '[]'")
+            _ensure_column(conn, "remote_sources", "exclude_patterns_json", "text not null default '[]'")
             _ensure_column(conn, "runs", "git_json", "text not null default '{}'")
 
     def upsert_project(
@@ -207,15 +211,18 @@ class DashboardStore:
             conn.execute(
                 """
                 insert into remote_sources (
-                    name, project_name, host, user, port, remote_log_root, method
+                    name, project_name, host, user, port, remote_log_root, method,
+                    include_patterns_json, exclude_patterns_json
                 )
-                values (?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(name, project_name) do update set
                     host=excluded.host,
                     user=excluded.user,
                     port=excluded.port,
                     remote_log_root=excluded.remote_log_root,
-                    method=excluded.method
+                    method=excluded.method,
+                    include_patterns_json=excluded.include_patterns_json,
+                    exclude_patterns_json=excluded.exclude_patterns_json
                 """,
                 (
                     source.name,
@@ -225,6 +232,8 @@ class DashboardStore:
                     source.port,
                     source.remote_log_root,
                     source.method,
+                    json.dumps(list(source.include_patterns)),
+                    json.dumps(list(source.exclude_patterns)),
                 ),
             )
 
@@ -246,6 +255,8 @@ class DashboardStore:
                 "port": row["port"],
                 "remote_log_root": row["remote_log_root"],
                 "method": row["method"],
+                "include_patterns": json.loads(row["include_patterns_json"]),
+                "exclude_patterns": json.loads(row["exclude_patterns_json"]),
             }
             for row in rows
         ]

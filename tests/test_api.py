@@ -213,6 +213,8 @@ class ApiPayloadTests(unittest.TestCase):
                     port=12188,
                     remote_log_root="/logs/rsl_rl",
                     project="project",
+                    include_patterns=("params/***",),
+                    exclude_patterns=("videos/***",),
                 )
             )
             store.record_sync_status(
@@ -226,6 +228,8 @@ class ApiPayloadTests(unittest.TestCase):
             payload = remote_sources_payload(store, "project")
 
         self.assertEqual(payload["sources"][0]["name"], "x-server")
+        self.assertEqual(payload["sources"][0]["include_patterns"], ["params/***"])
+        self.assertEqual(payload["sources"][0]["exclude_patterns"], ["videos/***"])
         self.assertEqual(payload["sources"][0]["latest_sync"]["status"], "dry-run")
         self.assertEqual(payload["sources"][0]["latest_sync"]["command"], ["rsync", "--dry-run"])
 

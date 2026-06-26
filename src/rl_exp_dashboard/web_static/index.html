@@ -429,6 +429,8 @@
                 <th>Host</th>
                 <th>Method</th>
                 <th>Remote Root</th>
+                <th>Include Patterns</th>
+                <th>Exclude Patterns</th>
                 <th>Last Sync</th>
                 <th>Local Path</th>
               </tr>
@@ -447,6 +449,8 @@
                       <td>${escapeHtml(source.user || '')}@${escapeHtml(source.host || '')}:${escapeHtml(source.port || '')}</td>
                       <td>${escapeHtml(source.method || '')}</td>
                       <td>${escapeHtml(source.remote_log_root || '')}</td>
+                      <td>${escapeHtml(joinList(source.include_patterns))}</td>
+                      <td>${escapeHtml(joinList(source.exclude_patterns))}</td>
                       <td>${lastSync}${latest.message ? `<br>${escapeHtml(latest.message)}` : ''}</td>
                       <td>${escapeHtml(latest.local_path || '')}</td>
                     </tr>

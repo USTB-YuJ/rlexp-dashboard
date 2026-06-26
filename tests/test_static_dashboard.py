@@ -22,6 +22,8 @@ class StaticDashboardTests(unittest.TestCase):
         self.assertIn("id=\"remote-sources\"", html)
         self.assertIn("fetch('/api/remote-sources')", html)
         self.assertIn("renderRemoteSources", html)
+        self.assertIn("Include Patterns", html)
+        self.assertIn("Exclude Patterns", html)
         self.assertIn("Lineage Overview", html)
         self.assertIn("id=\"lineage-overview\"", html)
         self.assertIn("fetch('/api/lineage')", html)
