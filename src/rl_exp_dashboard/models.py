@@ -23,6 +23,20 @@ class CheckpointRecord:
 
 
 @dataclass(frozen=True)
+class MetricSummary:
+    tag: str
+    first_step: int
+    last_step: int
+    first_value: float
+    last_value: float
+    min_value: float
+    max_value: float
+    count: int
+    window_means: Dict[str, float] = field(default_factory=dict)
+    slope_last_points: float = 0.0
+
+
+@dataclass(frozen=True)
 class RunRecord:
     run_id: str
     name: str
@@ -33,6 +47,7 @@ class RunRecord:
     param_files: List[Path] = field(default_factory=list)
     event_files: List[Path] = field(default_factory=list)
     checkpoints: List[CheckpointRecord] = field(default_factory=list)
+    metric_summaries: List[MetricSummary] = field(default_factory=list)
     videos: List[Path] = field(default_factory=list)
     artifacts: List[Path] = field(default_factory=list)
     parent_run_id: Optional[str] = None

@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, RunRecord
+from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
 
 
@@ -46,6 +46,20 @@ class DashboardStoreTests(unittest.TestCase):
                             is_latest=True,
                         )
                     ],
+                    metric_summaries=[
+                        MetricSummary(
+                            tag="Train/mean_reward",
+                            first_step=0,
+                            last_step=100,
+                            first_value=1.0,
+                            last_value=5.0,
+                            min_value=1.0,
+                            max_value=5.0,
+                            count=2,
+                            window_means={"mean100": 3.0},
+                            slope_last_points=0.04,
+                        )
+                    ],
                 ),
             )
             store.upsert_lineage(
@@ -62,12 +76,18 @@ class DashboardStoreTests(unittest.TestCase):
             runs = store.list_runs("unitree_rl_mjlab")
             child = next(run for run in runs if run["run_id"] == "group/child")
             checkpoints = store.list_checkpoints("group/child")
+            metrics = store.list_metric_summaries("group/child")
             lineage = store.list_lineage("group/child")
 
         self.assertEqual(child["latest_checkpoint"], "model_100.pt")
         self.assertEqual(child["params"]["agent"]["algorithm"]["entropy_coef"], 0.005)
         self.assertEqual(checkpoints[0]["iteration"], 100)
         self.assertEqual(checkpoints[0]["is_latest"], True)
+        self.assertEqual(metrics[0]["tag"], "Train/mean_reward")
+        self.assertEqual(metrics[0]["last_step"], 100)
+        self.assertEqual(metrics[0]["last_value"], 5.0)
+        self.assertEqual(metrics[0]["window_means"]["mean100"], 3.0)
+        self.assertEqual(metrics[0]["slope_last_points"], 0.04)
         self.assertEqual(lineage[0]["parent_run_id"], "group/parent")
         self.assertEqual(lineage[0]["relationship"], "finetune")
         self.assertEqual(lineage[0]["intended_change"], "lower entropy")

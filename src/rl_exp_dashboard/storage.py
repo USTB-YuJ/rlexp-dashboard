@@ -45,6 +45,21 @@ class DashboardStore:
                     primary key (run_id, path)
                 );
 
+                create table if not exists metric_summaries (
+                    run_id text not null references runs(run_id),
+                    tag text not null,
+                    first_step integer not null,
+                    last_step integer not null,
+                    first_value real not null,
+                    last_value real not null,
+                    min_value real not null,
+                    max_value real not null,
+                    count integer not null,
+                    window_means_json text not null,
+                    slope_last_points real not null,
+                    primary key (run_id, tag)
+                );
+
                 create table if not exists lineage_edges (
                     parent_run_id text not null,
                     child_run_id text not null,
@@ -121,6 +136,32 @@ class DashboardStore:
                     for checkpoint in run.checkpoints
                 ],
             )
+            conn.execute("delete from metric_summaries where run_id = ?", (run.run_id,))
+            conn.executemany(
+                """
+                insert into metric_summaries (
+                    run_id, tag, first_step, last_step, first_value, last_value,
+                    min_value, max_value, count, window_means_json, slope_last_points
+                )
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        run.run_id,
+                        metric.tag,
+                        metric.first_step,
+                        metric.last_step,
+                        metric.first_value,
+                        metric.last_value,
+                        metric.min_value,
+                        metric.max_value,
+                        metric.count,
+                        json.dumps(metric.window_means, sort_keys=True),
+                        metric.slope_last_points,
+                    )
+                    for metric in run.metric_summaries
+                ],
+            )
 
     def upsert_lineage(self, edge: LineageEdge) -> None:
         with self._connect() as conn:
@@ -175,6 +216,29 @@ class DashboardStore:
                 "size_bytes": row["size_bytes"],
                 "modified_time": row["modified_time"],
                 "is_latest": bool(row["is_latest"]),
+            }
+            for row in rows
+        ]
+
+    def list_metric_summaries(self, run_id: str) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "select * from metric_summaries where run_id = ? order by tag",
+                (run_id,),
+            ).fetchall()
+        return [
+            {
+                "run_id": row["run_id"],
+                "tag": row["tag"],
+                "first_step": row["first_step"],
+                "last_step": row["last_step"],
+                "first_value": row["first_value"],
+                "last_value": row["last_value"],
+                "min_value": row["min_value"],
+                "max_value": row["max_value"],
+                "count": row["count"],
+                "window_means": json.loads(row["window_means_json"]),
+                "slope_last_points": row["slope_last_points"],
             }
             for row in rows
         ]

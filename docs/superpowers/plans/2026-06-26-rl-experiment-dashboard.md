@@ -87,9 +87,31 @@
 - [x] **Step 3: Inspect `git diff --stat` and `git status --short`.**
 - [x] **Step 4: Commit only dashboard implementation files.**
 
+## Task 6: Metric Summary Pipeline
+
+**Files:**
+- Create: `tests/test_metrics.py`
+- Create: `src/rl_exp_dashboard/metrics.py`
+- Modify: `src/rl_exp_dashboard/models.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/indexer.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+
+- [x] **Step 1: Write failing tests for scalar summary statistics.**
+- [x] **Step 2: Implement metric summary dataclass and summary computation.**
+- [x] **Step 3: Write failing tests for SQLite metric summary persistence.**
+- [x] **Step 4: Implement `metric_summaries` storage table and repository method.**
+- [x] **Step 5: Write failing tests for indexer metric reader injection.**
+- [x] **Step 6: Implement optional TensorBoard event reader and connect it to `LocalRunIndexer`.**
+- [x] **Step 7: Write failing tests for CLI metric summary persistence.**
+- [x] **Step 8: Connect CLI indexing to metric summaries.**
+- [x] **Step 9: Write failing tests for API metric summary payload helper.**
+- [x] **Step 10: Add `/api/runs/{run_id}/metrics` payload support.**
+
 ## Later Milestones
 
-- TensorBoard scalar parser and sampled metric series.
+- Sampled metric time-series storage for charts.
 - Remote sync with SSH/rsync/scp.
 - React/Vite frontend.
 - Run detail, compare, lineage graph, checkpoint review UI.

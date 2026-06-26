@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from .api import serve
 from .indexer import LocalRunIndexer
+from .models import MetricSummary
 from .storage import DashboardStore
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(
+    argv: Optional[List[str]] = None,
+    metric_reader: Optional[Callable[[List[Path]], List[MetricSummary]]] = None,
+) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
     if args.command == "index":
-        return _index(args)
+        return _index(args, metric_reader=metric_reader)
     if args.command == "serve":
         serve(workspace=Path(args.workspace), host=args.host, port=args.port)
         return 0
@@ -40,12 +44,15 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _index(args: argparse.Namespace) -> int:
+def _index(
+    args: argparse.Namespace,
+    metric_reader: Optional[Callable[[List[Path]], List[MetricSummary]]] = None,
+) -> int:
     store = DashboardStore(args.db)
     store.initialize()
     store.upsert_project(args.project, local_cache_root=args.log_root)
 
-    runs = LocalRunIndexer(args.log_root).discover_runs()
+    runs = LocalRunIndexer(args.log_root, metric_reader=metric_reader).discover_runs()
     for run in runs:
         store.upsert_run(args.project, run)
 

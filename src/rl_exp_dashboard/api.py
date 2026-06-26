@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Dict
 
 from .storage import DashboardStore
+
+
+def metric_summaries_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
+    return {"run_id": run_id, "metrics": store.list_metric_summaries(run_id)}
 
 
 def create_app(db_path: Path):
@@ -24,6 +29,10 @@ def create_app(db_path: Path):
     @app.get("/api/runs")
     def list_runs(project: str | None = None):
         return {"runs": store.list_runs(project)}
+
+    @app.get("/api/runs/{run_id:path}/metrics")
+    def list_run_metrics(run_id: str):
+        return metric_summaries_payload(store, run_id)
 
     @app.get("/")
     def index():
