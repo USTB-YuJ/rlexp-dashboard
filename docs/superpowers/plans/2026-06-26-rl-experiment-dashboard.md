@@ -304,6 +304,20 @@
 - [x] **Step 3: Load remote source status on page load and via refresh without changing existing APIs.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 20: Lineage Overview API
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_api.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for project-scoped lineage edge listing and a lineage overview payload.**
+- [x] **Step 2: Add storage support for listing all lineage edges, optionally scoped by project.**
+- [x] **Step 3: Add an API payload and route returning lineage nodes plus edges for graph-oriented UI work.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

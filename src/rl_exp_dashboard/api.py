@@ -71,6 +71,25 @@ def remote_sources_payload(store: DashboardStore, project: str | None = None) ->
     return {"sources": sources}
 
 
+def lineage_overview_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
+    nodes = [
+        {
+            "run_id": run["run_id"],
+            "project_name": run["project_name"],
+            "name": run["name"],
+            "group": run["group"],
+            "latest_checkpoint": run["latest_checkpoint"],
+            "modified_time": run["modified_time"],
+        }
+        for run in store.list_runs(project)
+    ]
+    return {
+        "project": project,
+        "nodes": nodes,
+        "edges": store.list_lineage_edges(project),
+    }
+
+
 def save_run_observation_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict[str, Any]:
     run_id = str(payload["run_id"])
     store.upsert_run_observation(
@@ -146,6 +165,10 @@ def create_app(db_path: Path):
     @app.get("/api/remote-sources")
     def list_remote_sources(project: str | None = None):
         return remote_sources_payload(store, project)
+
+    @app.get("/api/lineage")
+    def get_lineage(project: str | None = None):
+        return lineage_overview_payload(store, project)
 
     @app.post("/api/run-observation")
     async def save_run_observation(payload: dict):

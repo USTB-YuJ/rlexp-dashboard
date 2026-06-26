@@ -5,6 +5,7 @@ from pathlib import Path
 from rl_exp_dashboard.api import (
     artifact_file_path,
     compare_runs_payload,
+    lineage_overview_payload,
     metric_series_payload,
     metric_summaries_payload,
     remote_sources_payload,
@@ -186,6 +187,17 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["before_last_value"], 1.0)
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["after_last_value"], 2.0)
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["delta_last_value"], 1.0)
+
+    def test_lineage_overview_payload_returns_nodes_and_edges(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+
+            payload = lineage_overview_payload(store, "project")
+
+        self.assertEqual({node["run_id"] for node in payload["nodes"]}, {"group/parent", "group/child"})
+        self.assertEqual(payload["edges"][0]["parent_run_id"], "group/parent")
+        self.assertEqual(payload["edges"][0]["child_run_id"], "group/child")
+        self.assertEqual(payload["edges"][0]["relationship"], "finetune")
 
     def test_remote_sources_payload_includes_latest_sync_status(self):
         with tempfile.TemporaryDirectory() as tmp:

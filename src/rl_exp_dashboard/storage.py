@@ -513,18 +513,7 @@ class DashboardStore:
                 "select * from lineage_edges where child_run_id = ? order by parent_run_id",
                 (child_run_id,),
             ).fetchall()
-        return [
-            {
-                "parent_run_id": row["parent_run_id"],
-                "child_run_id": row["child_run_id"],
-                "relationship": row["relationship"],
-                "parent_checkpoint": row["parent_checkpoint"],
-                "intended_change": row["intended_change"],
-                "note": row["note"],
-                "confirmed": bool(row["confirmed"]),
-            }
-            for row in rows
-        ]
+        return [self._lineage_row_to_dict(row) for row in rows]
 
     def list_child_lineage(self, parent_run_id: str) -> List[Dict[str, Any]]:
         with self._connect() as conn:
@@ -532,18 +521,18 @@ class DashboardStore:
                 "select * from lineage_edges where parent_run_id = ? order by child_run_id",
                 (parent_run_id,),
             ).fetchall()
-        return [
-            {
-                "parent_run_id": row["parent_run_id"],
-                "child_run_id": row["child_run_id"],
-                "relationship": row["relationship"],
-                "parent_checkpoint": row["parent_checkpoint"],
-                "intended_change": row["intended_change"],
-                "note": row["note"],
-                "confirmed": bool(row["confirmed"]),
-            }
-            for row in rows
-        ]
+        return [self._lineage_row_to_dict(row) for row in rows]
+
+    def list_lineage_edges(self, project_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        query = "select e.* from lineage_edges e"
+        params: tuple[Any, ...] = ()
+        if project_name is not None:
+            query += " join runs child on child.run_id = e.child_run_id where child.project_name = ?"
+            params = (project_name,)
+        query += " order by e.parent_run_id, e.child_run_id"
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [self._lineage_row_to_dict(row) for row in rows]
 
     def upsert_run_observation(
         self,
@@ -671,6 +660,17 @@ class DashboardStore:
             "latest_checkpoint": row["latest_checkpoint"],
             "parent_run_id": row["parent_run_id"],
             "parent_checkpoint": row["parent_checkpoint"],
+        }
+
+    def _lineage_row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
+        return {
+            "parent_run_id": row["parent_run_id"],
+            "child_run_id": row["child_run_id"],
+            "relationship": row["relationship"],
+            "parent_checkpoint": row["parent_checkpoint"],
+            "intended_change": row["intended_change"],
+            "note": row["note"],
+            "confirmed": bool(row["confirmed"]),
         }
 
 

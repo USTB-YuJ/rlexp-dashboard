@@ -125,6 +125,52 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(lineage[0]["relationship"], "finetune")
         self.assertEqual(lineage[0]["intended_change"], "lower entropy")
 
+    def test_store_lists_lineage_edges_scoped_by_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "dashboard.sqlite3"
+            store = DashboardStore(db_path)
+            store.initialize()
+            store.upsert_project("project-a", Path(tmp) / "cache-a")
+            store.upsert_project("project-b", Path(tmp) / "cache-b")
+            for project, run_id in [
+                ("project-a", "a/parent"),
+                ("project-a", "a/child"),
+                ("project-b", "b/parent"),
+                ("project-b", "b/child"),
+            ]:
+                store.upsert_run(
+                    project,
+                    RunRecord(
+                        run_id=run_id,
+                        name=run_id.split("/")[-1],
+                        group=run_id.split("/")[0],
+                        path=Path(tmp) / run_id,
+                        modified_time=1.0,
+                    ),
+                )
+            store.upsert_lineage(
+                LineageEdge(
+                    parent_run_id="a/parent",
+                    child_run_id="a/child",
+                    relationship="resume",
+                    intended_change="project a change",
+                )
+            )
+            store.upsert_lineage(
+                LineageEdge(
+                    parent_run_id="b/parent",
+                    child_run_id="b/child",
+                    relationship="resume",
+                    intended_change="project b change",
+                )
+            )
+
+            project_edges = store.list_lineage_edges("project-a")
+            all_edges = store.list_lineage_edges()
+
+        self.assertEqual([edge["child_run_id"] for edge in project_edges], ["a/child"])
+        self.assertEqual([edge["parent_run_id"] for edge in all_edges], ["a/parent", "b/parent"])
+
     def test_store_persists_remote_sources_and_sync_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = Path(tmp) / "dashboard.sqlite3"
