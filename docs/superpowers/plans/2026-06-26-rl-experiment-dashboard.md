@@ -593,6 +593,17 @@
 - [x] **Step 3: Update `pyproject.toml` package metadata to use `README.md`.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 40: Default Server Install Dependencies
+
+**Files:**
+- Modify: `pyproject.toml`
+- Modify: `tests/test_package_metadata.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write a failing package metadata test proving plain `pip install rl-exp-dashboard` includes FastAPI and uvicorn.**
+- [x] **Step 2: Move FastAPI and uvicorn into base package dependencies so `rl-exp-dashboard serve` works after normal install.**
+- [x] **Step 3: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

@@ -9,7 +9,7 @@ description = "Local-first dashboard for robot reinforcement learning experiment
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "RL Experiment Dashboard Contributors" }]
-dependencies = []
+dependencies = ["fastapi>=0.110", "uvicorn>=0.27"]
 
 [project.optional-dependencies]
 server = ["fastapi>=0.110", "uvicorn>=0.27"]
