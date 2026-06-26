@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Sequence
+from typing import Callable, List, Sequence
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,18 @@ class SyncPlan:
     command: List[str]
     dry_run: bool
     include_videos: bool
+
+
+@dataclass(frozen=True)
+class SyncExecutionResult:
+    status: str
+    return_code: int
+    stdout: str
+    stderr: str
+    command: List[str]
+
+
+SyncRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 def build_sync_plan(
@@ -54,6 +67,32 @@ def build_sync_plan(
         command=command,
         dry_run=dry_run,
         include_videos=include_videos,
+    )
+
+
+def execute_sync_plan(
+    plan: SyncPlan,
+    runner: SyncRunner | None = None,
+) -> SyncExecutionResult:
+    if plan.dry_run:
+        raise ValueError("Cannot execute a dry-run sync plan")
+    if plan.method == "ssh-tar":
+        raise ValueError("ssh-tar execution is not implemented; use rsync or scp")
+
+    plan.local_path.mkdir(parents=True, exist_ok=True)
+    runner = runner or subprocess.run
+    completed = runner(
+        plan.command,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return SyncExecutionResult(
+        status="completed" if completed.returncode == 0 else "failed",
+        return_code=int(completed.returncode),
+        stdout=completed.stdout or "",
+        stderr=completed.stderr or "",
+        command=plan.command,
     )
 
 

@@ -132,6 +132,57 @@ class CliTests(unittest.TestCase):
         self.assertEqual(status["status"], "dry-run")
         self.assertIn("--dry-run", status["command"])
 
+    def test_sync_command_executes_non_dry_run_with_injected_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            db_path = tmp_path / "dashboard.sqlite3"
+            cache_root = tmp_path / "cache"
+            executed_commands = []
+
+            class FakeCompletedProcess:
+                returncode = 0
+                stdout = "copied logs"
+                stderr = ""
+
+            def sync_runner(command, **kwargs):
+                executed_commands.append((command, kwargs))
+                return FakeCompletedProcess()
+
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "sync",
+                        "--project",
+                        "unitree_rl_mjlab",
+                        "--source-name",
+                        "x-server",
+                        "--host",
+                        "example.com",
+                        "--user",
+                        "eai",
+                        "--port",
+                        "12188",
+                        "--remote-log-root",
+                        "/remote/logs/rsl_rl",
+                        "--cache-root",
+                        str(cache_root),
+                        "--db",
+                        str(db_path),
+                    ],
+                    sync_runner=sync_runner,
+                )
+
+            store = DashboardStore(db_path)
+            status = store.latest_sync_status("x-server", "unitree_rl_mjlab")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(len(executed_commands), 1)
+        self.assertNotIn("--dry-run", executed_commands[0][0])
+        self.assertEqual(status["status"], "completed")
+        self.assertEqual(status["message"], "copied logs")
+        self.assertIn("Sync completed", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

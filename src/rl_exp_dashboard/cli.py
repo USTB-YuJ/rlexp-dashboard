@@ -8,12 +8,13 @@ from .api import serve
 from .indexer import LocalRunIndexer
 from .models import MetricSummary
 from .storage import DashboardStore
-from .sync import RemoteSource, build_sync_plan
+from .sync import RemoteSource, SyncRunner, build_sync_plan, execute_sync_plan
 
 
 def main(
     argv: Optional[List[str]] = None,
     metric_reader: Optional[Callable[[List[Path]], List[MetricSummary]]] = None,
+    sync_runner: Optional[SyncRunner] = None,
 ) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -24,7 +25,7 @@ def main(
         serve(workspace=Path(args.workspace), host=args.host, port=args.port)
         return 0
     if args.command == "sync":
-        return _sync(args)
+        return _sync(args, runner=sync_runner)
 
     parser.print_help()
     return 1
@@ -76,7 +77,7 @@ def _index(
     return 0
 
 
-def _sync(args: argparse.Namespace) -> int:
+def _sync(args: argparse.Namespace, runner: Optional[SyncRunner] = None) -> int:
     store = DashboardStore(args.db)
     store.initialize()
     store.upsert_project(args.project, local_cache_root=args.cache_root)
@@ -96,19 +97,30 @@ def _sync(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
         include_videos=args.include_videos,
     )
-    status = "dry-run" if args.dry_run else "planned"
+    print(" ".join(plan.command))
+    if args.dry_run:
+        store.record_sync_status(
+            source_name=source.name,
+            project=source.project,
+            status="dry-run",
+            command=plan.command,
+            local_path=plan.local_path,
+            message="preview only",
+        )
+        return 0
+
+    result = execute_sync_plan(plan, runner=runner)
+    message = result.stdout.strip() or result.stderr.strip()
     store.record_sync_status(
         source_name=source.name,
         project=source.project,
-        status=status,
-        command=plan.command,
+        status=result.status,
+        command=result.command,
         local_path=plan.local_path,
-        message="preview only" if args.dry_run else "execution not implemented",
+        message=message,
     )
-    print(" ".join(plan.command))
-    if not args.dry_run:
-        print("Sync execution is not implemented yet; rerun with --dry-run for preview.")
-    return 0
+    print(f"Sync {result.status}: {message}".rstrip())
+    return 0 if result.status == "completed" else result.return_code
 
 
 if __name__ == "__main__":

@@ -198,9 +198,21 @@
 - [x] **Step 3: Render config diffs and metric last-value deltas from the existing compare API.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 12: Actual Remote Sync Execution
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/sync.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `tests/test_sync.py`
+- Modify: `tests/test_cli.py`
+
+- [x] **Step 1: Write failing tests for sync execution with an injectable subprocess runner and non-dry-run CLI status recording.**
+- [x] **Step 2: Implement `execute_sync_plan()` with local directory creation and structured completion/failure results.**
+- [x] **Step 3: Wire non-dry-run `rl-exp-dashboard sync` to execute the plan and record completed/failed status.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
-- Actual remote sync execution with SSH/rsync/scp.
 - React/Vite frontend.
 - Rich compare, lineage graph, checkpoint review UI.
 - Packaged frontend build pipeline and Dockerfile.
