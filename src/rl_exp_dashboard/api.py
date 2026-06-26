@@ -174,6 +174,7 @@ def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str
     run_id = run["run_id"]
     artifacts = store.list_run_artifacts(run_id)
     observation = store.get_run_observation(run_id) or {}
+    checkpoint_reviews = store.list_checkpoint_reviews(run_id)
     parent_lineage = store.list_lineage(run_id)
     child_lineage = store.list_child_lineage(run_id)
     row = dict(run)
@@ -181,6 +182,8 @@ def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str
         {
             "review_verdict": observation.get("verdict", "unreviewed"),
             "recommended_checkpoint": observation.get("recommended_checkpoint"),
+            "has_observation": bool(observation),
+            "has_reviewed_checkpoint": bool(checkpoint_reviews),
             "video_count": sum(1 for artifact in artifacts if artifact["kind"] == "video"),
             "artifact_count": sum(1 for artifact in artifacts if artifact["kind"] != "video"),
             "parent_count": len(parent_lineage),

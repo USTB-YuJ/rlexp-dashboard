@@ -422,6 +422,21 @@
 - [x] **Step 4: Render Reward, Review, Lineage, and Media columns in the bundled run table.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 28: Run Table Status Filters
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for observation/review flags and dashboard status filters.**
+- [x] **Step 2: Add compact run flags for observations and reviewed checkpoints.**
+- [x] **Step 3: Add Review and Flags controls to the bundled run table.**
+- [x] **Step 4: Wire filters for reviewed, has video, has artifact, has parent, and has children.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

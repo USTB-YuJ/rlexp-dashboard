@@ -154,7 +154,7 @@
       }
       .table-controls {
         display: grid;
-        grid-template-columns: minmax(180px, 1.2fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(140px, 0.8fr);
+        grid-template-columns: minmax(180px, 1.2fr) repeat(5, minmax(120px, 0.8fr));
         gap: 10px;
         padding: 12px 16px;
         border-bottom: 1px solid var(--line);
@@ -240,6 +240,29 @@
           <label>
             <div class="label">Group</div>
             <select id="group-filter"></select>
+          </label>
+          <label>
+            <div class="label">Review</div>
+            <select id="review-filter">
+              <option value="">All reviews</option>
+              <option value="unreviewed">unreviewed</option>
+              <option value="good">good</option>
+              <option value="mixed">mixed</option>
+              <option value="bad">bad</option>
+              <option value="exported">exported</option>
+            </select>
+          </label>
+          <label>
+            <div class="label">Flags</div>
+            <select id="flag-filter">
+              <option value="">All flags</option>
+              <option value="has-observation">Has notes</option>
+              <option value="has-reviewed-checkpoint">Reviewed checkpoint</option>
+              <option value="has-video">Has video</option>
+              <option value="has-artifact">Has artifact</option>
+              <option value="has-parent">Has parent</option>
+              <option value="has-children">Has children</option>
+            </select>
           </label>
           <label>
             <div class="label">Sort</div>
@@ -343,6 +366,8 @@
       const runSearch = document.getElementById('run-search');
       const projectFilter = document.getElementById('project-filter');
       const groupFilter = document.getElementById('group-filter');
+      const reviewFilter = document.getElementById('review-filter');
+      const flagFilter = document.getElementById('flag-filter');
       const runSort = document.getElementById('run-sort');
       const compareBeforeRun = document.getElementById('compare-before-run');
       const compareAfterRun = document.getElementById('compare-after-run');
@@ -359,6 +384,8 @@
       runSearch.addEventListener('input', renderFilteredRuns);
       projectFilter.addEventListener('change', renderFilteredRuns);
       groupFilter.addEventListener('change', renderFilteredRuns);
+      reviewFilter.addEventListener('change', renderFilteredRuns);
+      flagFilter.addEventListener('change', renderFilteredRuns);
       runSort.addEventListener('change', renderFilteredRuns);
 
       async function loadRuns() {
@@ -595,6 +622,8 @@
         const search = runSearch.value.trim().toLowerCase();
         const project = projectFilter.value;
         const group = groupFilter.value;
+        const review = reviewFilter.value;
+        const flag = flagFilter.value;
         let runs = indexedRuns.filter((run) => {
           const searchable = [
             run.run_id,
@@ -611,7 +640,9 @@
           return (
             (!search || searchable.includes(search)) &&
             (!project || run.project_name === project) &&
-            (!group || run.group === group)
+            (!group || run.group === group) &&
+            (!review || (run.review_verdict || 'unreviewed') === review) &&
+            matchesRunFlag(run, flag)
           );
         });
         runs = sortRuns(runs, runSort.value);
@@ -690,6 +721,17 @@
         if (Number(run.video_count || 0) > 0) parts.push(`${run.video_count} video`);
         if (Number(run.artifact_count || 0) > 0) parts.push(`${run.artifact_count} artifact`);
         return parts.join(', ');
+      }
+
+      function matchesRunFlag(run, flag) {
+        if (!flag) return true;
+        if (flag === 'has-observation') return Boolean(run.has_observation);
+        if (flag === 'has-reviewed-checkpoint') return Boolean(run.has_reviewed_checkpoint);
+        if (flag === 'has-video') return Number(run.video_count || 0) > 0;
+        if (flag === 'has-artifact') return Number(run.artifact_count || 0) > 0;
+        if (flag === 'has-parent') return Boolean(run.has_parent || Number(run.parent_count || 0) > 0);
+        if (flag === 'has-children') return Boolean(run.has_children || Number(run.child_count || 0) > 0);
+        return true;
       }
 
       function populateCompareSelectors(runs) {

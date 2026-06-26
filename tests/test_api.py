@@ -74,6 +74,13 @@ class ApiPayloadTests(unittest.TestCase):
                 tags=["reviewed"],
                 recommended_checkpoint="model_20.pt",
             )
+            store.upsert_checkpoint_review(
+                run_id="group/child",
+                checkpoint="model_20.pt",
+                status="mixed",
+                notes="Visual review done.",
+                tags=["reviewed"],
+            )
 
             payload = runs_payload(store, "project")
 
@@ -82,6 +89,8 @@ class ApiPayloadTests(unittest.TestCase):
         parent = by_run_id["group/parent"]
         self.assertEqual(child["review_verdict"], "mixed")
         self.assertEqual(child["recommended_checkpoint"], "model_20.pt")
+        self.assertEqual(child["has_observation"], True)
+        self.assertEqual(child["has_reviewed_checkpoint"], True)
         self.assertEqual(child["video_count"], 1)
         self.assertEqual(child["artifact_count"], 1)
         self.assertEqual(child["parent_count"], 1)
