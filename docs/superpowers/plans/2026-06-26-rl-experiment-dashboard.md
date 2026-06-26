@@ -566,6 +566,20 @@
 - [x] **Step 4: Render lineage state/source/result fields in the bundled dashboard.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 38: CLI Inferred Lineage Metadata
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/models.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `tests/test_cli.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write a failing CLI test proving inferred resume lineage uses `confirmation_state=confirmed` and `confidence_source=params`.**
+- [x] **Step 2: Add a shared `inferred_resume_lineage_edge()` helper and use it from API indexing.**
+- [x] **Step 3: Use the same helper from CLI indexing.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

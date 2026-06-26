@@ -75,3 +75,17 @@ class LineageEdge:
     confirmation_state: Optional[str] = None
     confidence_source: str = "manual"
     result_summary: str = ""
+
+
+def inferred_resume_lineage_edge(run: RunRecord) -> LineageEdge:
+    if not run.parent_run_id:
+        raise ValueError(f"Run `{run.run_id}` does not contain parent resume metadata.")
+    return LineageEdge(
+        parent_run_id=run.parent_run_id,
+        child_run_id=run.run_id,
+        relationship="resume",
+        parent_checkpoint=run.parent_checkpoint,
+        intended_change="Inferred from indexed resume/load_run parameters.",
+        confirmation_state="confirmed",
+        confidence_source="params",
+    )

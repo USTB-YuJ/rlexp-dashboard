@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from .config_diff import diff_configs
 from .indexer import LocalRunIndexer
-from .models import LineageEdge
+from .models import LineageEdge, inferred_resume_lineage_edge
 from .storage import DashboardStore
 from .sync import RemoteSource, build_sync_plan, execute_sync_plan
 
@@ -62,17 +62,7 @@ def index_project_payload(
     for run in runs:
         store.upsert_run(project_name, run)
         if run.parent_run_id:
-            store.upsert_lineage(
-                LineageEdge(
-                    parent_run_id=run.parent_run_id,
-                    child_run_id=run.run_id,
-                    relationship="resume",
-                    parent_checkpoint=run.parent_checkpoint,
-                    intended_change="Inferred from indexed resume/load_run parameters.",
-                    confirmation_state="confirmed",
-                    confidence_source="params",
-                )
-            )
+            store.upsert_lineage(inferred_resume_lineage_edge(run))
 
     return {
         "project": project_name,

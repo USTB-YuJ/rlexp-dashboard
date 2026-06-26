@@ -6,7 +6,7 @@ from typing import Callable, List, Optional
 
 from .api import serve
 from .indexer import LocalRunIndexer
-from .models import LineageEdge, MetricSummary
+from .models import MetricSummary, inferred_resume_lineage_edge
 from .project_config import ProjectConfig, load_project_config
 from .storage import DashboardStore
 from .sync import RemoteSource, SyncRunner, build_sync_plan, execute_sync_plan
@@ -84,15 +84,7 @@ def _index(
     for run in runs:
         store.upsert_run(args.project, run)
         if run.parent_run_id:
-            store.upsert_lineage(
-                LineageEdge(
-                    parent_run_id=run.parent_run_id,
-                    child_run_id=run.run_id,
-                    relationship="resume",
-                    parent_checkpoint=run.parent_checkpoint,
-                    intended_change="Inferred from indexed resume/load_run parameters.",
-                )
-            )
+            store.upsert_lineage(inferred_resume_lineage_edge(run))
 
     print(f"Indexed {len(runs)} runs into {args.db}")
     return 0

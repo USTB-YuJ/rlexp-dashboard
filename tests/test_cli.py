@@ -157,6 +157,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(lineage[0]["parent_run_id"], "group/baseline")
         self.assertEqual(lineage[0]["parent_checkpoint"], "model_100.pt")
         self.assertEqual(lineage[0]["relationship"], "resume")
+        self.assertEqual(lineage[0]["confirmation_state"], "confirmed")
+        self.assertEqual(lineage[0]["confidence_source"], "params")
+        self.assertEqual(lineage[0]["confirmed"], True)
 
     def test_sync_dry_run_records_remote_source_and_prints_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
