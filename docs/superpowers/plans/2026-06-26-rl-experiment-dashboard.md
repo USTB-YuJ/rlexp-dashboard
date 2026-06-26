@@ -392,6 +392,21 @@
 - [x] **Step 4: Render include/exclude patterns in the bundled Remote Sources panel.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 26: Manual Lineage Edge Editing
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for saving a manual lineage edge and showing a dashboard form.**
+- [x] **Step 2: Add an API helper and `POST /api/lineage-edge` route backed by existing lineage storage.**
+- [x] **Step 3: Add a bundled dashboard form for manually linking parent and child runs.**
+- [x] **Step 4: Reload lineage overview after saving a manual edge.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

@@ -480,7 +480,7 @@
           edges.length === 0
             ? `<div class="empty">No lineage links recorded.</div>`
             : `<table aria-label="Lineage edges">
-                <thead><tr><th>Parent</th><th>Child</th><th>Type</th><th>Checkpoint</th><th>Change</th></tr></thead>
+                <thead><tr><th>Parent</th><th>Child</th><th>Type</th><th>Checkpoint</th><th>Change</th><th>Note</th></tr></thead>
                 <tbody>
                   ${edges
                     .map(
@@ -491,6 +491,7 @@
                           <td>${escapeHtml(edge.relationship || '')}</td>
                           <td>${escapeHtml(edge.parent_checkpoint || '')}</td>
                           <td>${escapeHtml(edge.intended_change || '')}</td>
+                          <td>${escapeHtml(edge.note || '')}</td>
                         </tr>
                       `,
                     )
@@ -504,7 +505,79 @@
           </div>
           <h3 class="subhead">Edges</h3>
           ${edgeRows}
+          <h3 class="subhead">Manual Lineage Link</h3>
+          ${lineageLinkForm(nodes)}
         `;
+        bindLineageEdgeForm();
+      }
+
+      function lineageLinkForm(nodes) {
+        const parent = nodes[0]?.run_id || '';
+        const child = nodes[1]?.run_id || parent;
+        return `
+          <form id="lineage-edge-form">
+            <div class="form-row">
+              <label>
+                <div class="label">Parent run</div>
+                <select name="parent_run_id">
+                  ${nodes.map((node) => option(node.run_id, parent)).join('')}
+                </select>
+              </label>
+              <label>
+                <div class="label">Child run</div>
+                <select name="child_run_id">
+                  ${nodes.map((node) => option(node.run_id, child)).join('')}
+                </select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Relationship</div>
+                <select name="relationship">
+                  ${option('manual-link', 'manual-link')}
+                  ${option('resume')}
+                  ${option('finetune')}
+                  ${option('ablation')}
+                  ${option('rerun')}
+                </select>
+              </label>
+              <label>
+                <div class="label">Parent checkpoint</div>
+                <input name="parent_checkpoint" placeholder="model_1000.pt" />
+              </label>
+            </div>
+            <label>
+              <div class="label">Intended change</div>
+              <textarea name="intended_change" placeholder="What changed in the child run?"></textarea>
+            </label>
+            <label>
+              <div class="label">Note</div>
+              <textarea name="note" placeholder="Manual review notes, observed behavior, or why this link matters."></textarea>
+            </label>
+            <div class="form-actions">
+              <button type="submit">Save Lineage Link</button>
+            </div>
+          </form>
+        `;
+      }
+
+      function bindLineageEdgeForm() {
+        const form = document.getElementById('lineage-edge-form');
+        if (!form) return;
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const data = new FormData(form);
+          await postJson('/api/lineage-edge', {
+            parent_run_id: data.get('parent_run_id'),
+            child_run_id: data.get('child_run_id'),
+            relationship: data.get('relationship'),
+            parent_checkpoint: data.get('parent_checkpoint'),
+            intended_change: data.get('intended_change'),
+            note: data.get('note'),
+            confirmed: true,
+          });
+          await loadLineageOverview();
+        });
       }
 
       function renderRuns(runs) {

@@ -12,6 +12,7 @@ from rl_exp_dashboard.api import (
     remote_sources_payload,
     run_detail_payload,
     save_checkpoint_review_payload,
+    save_lineage_edge_payload,
     save_run_observation_payload,
 )
 from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSeries, MetricSummary, RunRecord
@@ -199,6 +200,27 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["edges"][0]["parent_run_id"], "group/parent")
         self.assertEqual(payload["edges"][0]["child_run_id"], "group/child")
         self.assertEqual(payload["edges"][0]["relationship"], "finetune")
+
+    def test_save_lineage_edge_payload_persists_manual_link(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+
+            saved = save_lineage_edge_payload(
+                store,
+                {
+                    "parent_run_id": "group/parent",
+                    "child_run_id": "group/child",
+                    "relationship": "manual-link",
+                    "parent_checkpoint": "model_10.pt",
+                    "intended_change": "Corrected lineage after review.",
+                    "note": "Linked by user.",
+                },
+            )
+            overview = lineage_overview_payload(store, "project")
+
+        self.assertEqual(saved["edge"]["relationship"], "manual-link")
+        self.assertEqual(saved["edge"]["confirmed"], True)
+        self.assertEqual(overview["edges"][0]["note"], "Linked by user.")
 
     def test_remote_sources_payload_includes_latest_sync_status(self):
         with tempfile.TemporaryDirectory() as tmp:

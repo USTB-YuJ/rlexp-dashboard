@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from .config_diff import diff_configs
+from .models import LineageEdge
 from .storage import DashboardStore
 
 
@@ -94,6 +95,25 @@ def lineage_overview_payload(store: DashboardStore, project: str | None = None) 
     }
 
 
+def save_lineage_edge_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict[str, Any]:
+    parent_run_id = str(payload["parent_run_id"])
+    child_run_id = str(payload["child_run_id"])
+    edge = LineageEdge(
+        parent_run_id=parent_run_id,
+        child_run_id=child_run_id,
+        relationship=str(payload.get("relationship") or "manual-link"),
+        parent_checkpoint=payload.get("parent_checkpoint") or None,
+        intended_change=str(payload.get("intended_change", "")),
+        note=str(payload.get("note", "")),
+        confirmed=_payload_bool(payload.get("confirmed", True)),
+    )
+    store.upsert_lineage(edge)
+    saved_edge = next(
+        item for item in store.list_lineage(child_run_id) if item["parent_run_id"] == parent_run_id
+    )
+    return {"edge": saved_edge}
+
+
 def save_run_observation_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict[str, Any]:
     run_id = str(payload["run_id"])
     store.upsert_run_observation(
@@ -123,6 +143,14 @@ def save_checkpoint_review_payload(store: DashboardStore, payload: Dict[str, Any
         item for item in store.list_checkpoint_reviews(run_id) if item["checkpoint"] == checkpoint
     )
     return {"run_id": run_id, "review": review}
+
+
+def _payload_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off", ""}
+    return bool(value)
 
 
 def _metric_deltas(before_metrics: list[Dict[str, Any]], after_metrics: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
@@ -177,6 +205,10 @@ def create_app(db_path: Path):
     @app.get("/api/lineage")
     def get_lineage(project: str | None = None):
         return lineage_overview_payload(store, project)
+
+    @app.post("/api/lineage-edge")
+    async def save_lineage_edge(payload: dict):
+        return save_lineage_edge_payload(store, payload)
 
     @app.post("/api/run-observation")
     async def save_run_observation(payload: dict):
