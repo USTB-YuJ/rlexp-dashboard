@@ -18,6 +18,7 @@ from rl_exp_dashboard.api import (
     save_project_payload,
     save_remote_source_payload,
     save_run_observation_payload,
+    sync_remote_source_payload,
     timeline_payload,
 )
 from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSeries, MetricSummary, RunRecord
@@ -429,6 +430,38 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(source["method"], "scp")
         self.assertEqual(source["include_patterns"], ["params/***", "events.out.tfevents.*"])
         self.assertEqual(source["exclude_patterns"], ["videos/***", "wandb/***"])
+
+    def test_sync_remote_source_payload_records_dry_run_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = DashboardStore(Path(tmp) / "dashboard.sqlite3")
+            store.initialize()
+            cache_root = Path(tmp) / "cache"
+            store.upsert_project("project", cache_root)
+            store.upsert_remote_source(
+                RemoteSource(
+                    name="x-server",
+                    host="example.com",
+                    user="eai",
+                    port=12188,
+                    remote_log_root="/logs/rsl_rl",
+                    project="project",
+                    method="rsync",
+                )
+            )
+
+            payload = sync_remote_source_payload(
+                store,
+                {"project": "project", "source_name": "x-server", "dry_run": True},
+            )
+            status = store.latest_sync_status("x-server", "project")
+
+        self.assertEqual(payload["status"], "dry-run")
+        self.assertEqual(payload["source_name"], "x-server")
+        self.assertEqual(payload["project"], "project")
+        self.assertIn("rsync", payload["command"])
+        self.assertIn("--dry-run", payload["command"])
+        self.assertEqual(status["status"], "dry-run")
+        self.assertEqual(status["local_path"], str(cache_root / "x-server" / "project" / "logs" / "rsl_rl"))
 
     def test_projects_payload_includes_project_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:

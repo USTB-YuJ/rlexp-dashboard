@@ -534,6 +534,20 @@
 - [x] **Step 3: Render an Index Project Logs form and refresh runs/timeline/lineage after indexing.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 36: Dashboard Remote Sync
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for remote sync payloads and dashboard sync form hooks.**
+- [x] **Step 2: Add `sync_remote_source_payload()` and `/api/sync-remote-source` POST route.**
+- [x] **Step 3: Render a Sync Remote Source form with dry-run default and refresh sync status.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

@@ -615,9 +615,11 @@
               </table>`;
         remoteSources.innerHTML = `
           ${remoteSourceForm(sources[0] || {})}
+          ${remoteSyncForm(sources[0] || {})}
           ${sourceRows}
         `;
         bindRemoteSourceForm();
+        bindRemoteSyncForm();
       }
 
       function remoteSourceForm(source) {
@@ -698,6 +700,63 @@
           method: form.get('method'),
           include_patterns: splitTags(form.get('include_patterns')),
           exclude_patterns: splitTags(form.get('exclude_patterns')),
+        });
+        await loadRemoteSources();
+      }
+
+      function remoteSyncForm(source) {
+        return `
+          <h3 class="subhead">Sync Remote Source</h3>
+          <form id="remote-sync-form">
+            <div class="form-row">
+              <label>
+                <div class="label">Project</div>
+                <input name="project" value="${escapeHtml(source.project || '')}" required />
+              </label>
+              <label>
+                <div class="label">Source name</div>
+                <input name="source_name" value="${escapeHtml(source.name || '')}" required />
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Cache root override</div>
+                <input name="cache_root" />
+              </label>
+              <label>
+                <div class="label">Include videos</div>
+                <select name="include_videos">
+                  ${option('false', 'false')}
+                  ${option('true', 'false')}
+                </select>
+              </label>
+            </div>
+            <label>
+              <input type="checkbox" name="dry_run" checked />
+              Dry run
+            </label>
+            <div class="form-actions">
+              <button type="submit">Sync Source</button>
+            </div>
+          </form>
+        `;
+      }
+
+      function bindRemoteSyncForm() {
+        const form = document.getElementById('remote-sync-form');
+        if (!form) return;
+        form.addEventListener('submit', syncRemoteSource);
+      }
+
+      async function syncRemoteSource(event) {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        await postJson('/api/sync-remote-source', {
+          project: form.get('project'),
+          source_name: form.get('source_name'),
+          cache_root: form.get('cache_root'),
+          include_videos: form.get('include_videos') === 'true',
+          dry_run: form.get('dry_run') === 'on',
         });
         await loadRemoteSources();
       }

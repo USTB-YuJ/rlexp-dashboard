@@ -7,7 +7,7 @@ from .config_diff import diff_configs
 from .indexer import LocalRunIndexer
 from .models import LineageEdge
 from .storage import DashboardStore
-from .sync import RemoteSource
+from .sync import RemoteSource, build_sync_plan, execute_sync_plan
 
 _DEFAULT_RUN_TABLE_METRICS = (
     "Train/mean_reward",
@@ -246,6 +246,81 @@ def save_remote_source_payload(store: DashboardStore, payload: Dict[str, Any]) -
         if item["name"] == source.name and item["project"] == project
     )
     return {"source": saved}
+
+
+def sync_remote_source_payload(
+    store: DashboardStore,
+    payload: Dict[str, Any],
+    runner: Any = None,
+) -> Dict[str, Any]:
+    project_name = str(payload.get("project") or payload.get("project_name") or "").strip()
+    source_name = str(payload.get("source_name") or payload.get("name") or "").strip()
+    if not project_name:
+        raise ValueError("Project name is required.")
+    if not source_name:
+        raise ValueError("Remote source name is required.")
+
+    project = store.get_project(project_name)
+    if project is None:
+        raise ValueError(f"Project `{project_name}` has not been created.")
+
+    source_row = next(
+        (source for source in store.list_remote_sources(project_name) if source["name"] == source_name),
+        None,
+    )
+    if source_row is None:
+        raise ValueError(f"Remote source `{source_name}` for project `{project_name}` was not found.")
+
+    source = RemoteSource(
+        name=source_row["name"],
+        host=source_row["host"],
+        user=source_row["user"],
+        port=int(source_row["port"]),
+        remote_log_root=source_row["remote_log_root"],
+        project=source_row["project"],
+        method=source_row.get("method", "rsync"),
+        include_patterns=tuple(source_row.get("include_patterns", [])),
+        exclude_patterns=tuple(source_row.get("exclude_patterns", [])),
+    )
+    cache_root = Path(str(payload.get("cache_root") or project["local_cache_root"])).expanduser()
+    dry_run = _payload_bool(payload.get("dry_run", True))
+    include_videos = _payload_bool(payload.get("include_videos", False))
+    plan = build_sync_plan(
+        source,
+        cache_root=cache_root,
+        dry_run=dry_run,
+        include_videos=include_videos,
+    )
+
+    if dry_run:
+        status = "dry-run"
+        return_code = 0
+        message = "preview only"
+        command = plan.command
+    else:
+        result = execute_sync_plan(plan, runner=runner)
+        status = result.status
+        return_code = result.return_code
+        message = result.stdout.strip() or result.stderr.strip()
+        command = result.command
+
+    store.record_sync_status(
+        source_name=source.name,
+        project=source.project,
+        status=status,
+        command=command,
+        local_path=plan.local_path,
+        message=message,
+    )
+    return {
+        "source_name": source.name,
+        "project": source.project,
+        "status": status,
+        "return_code": return_code,
+        "command": command,
+        "local_path": str(plan.local_path),
+        "message": message,
+    }
 
 
 def projects_payload(store: DashboardStore) -> Dict[str, Any]:
@@ -490,6 +565,13 @@ def create_app(db_path: Path):
     @app.post("/api/remote-source")
     async def save_remote_source(payload: dict):
         return save_remote_source_payload(store, payload)
+
+    @app.post("/api/sync-remote-source")
+    async def sync_remote_source(payload: dict):
+        try:
+            return sync_remote_source_payload(store, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/lineage")
     def get_lineage(project: str | None = None):
