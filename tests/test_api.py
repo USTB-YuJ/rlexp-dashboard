@@ -108,7 +108,6 @@ class ApiPayloadTests(unittest.TestCase):
                 tags=["forward-walk"],
                 recommended=True,
             )
-
             payload = run_detail_payload(store, "group/child")
 
         self.assertEqual(payload["run"]["run_id"], "group/child")
@@ -118,6 +117,8 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["child_lineage"], [])
         self.assertEqual(payload["observation"]["verdict"], "good")
         self.assertEqual(payload["checkpoint_reviews"][0]["checkpoint"], "model_20.pt")
+        self.assertEqual([artifact["kind"] for artifact in payload["artifacts"]], ["artifact", "video"])
+        self.assertEqual([Path(artifact["path"]).name for artifact in payload["artifacts"]], ["policy.onnx", "model_20.mp4"])
 
     def test_save_observation_and_checkpoint_review_payloads_persist_notes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -204,6 +205,12 @@ class ApiPayloadTests(unittest.TestCase):
         store = DashboardStore(tmp_path / "dashboard.sqlite3")
         store.initialize()
         store.upsert_project("project", tmp_path / "cache")
+        child_video = tmp_path / "child" / "videos" / "play" / "model_20.mp4"
+        child_artifact = tmp_path / "child" / "exports" / "policy.onnx"
+        child_video.parent.mkdir(parents=True)
+        child_artifact.parent.mkdir(parents=True)
+        child_video.write_bytes(b"video")
+        child_artifact.write_bytes(b"onnx")
         store.upsert_run(
             "project",
             RunRecord(
@@ -271,6 +278,8 @@ class ApiPayloadTests(unittest.TestCase):
                         original_count=1,
                     )
                 ],
+                videos=[child_video],
+                artifacts=[child_artifact],
             ),
         )
         store.upsert_lineage(

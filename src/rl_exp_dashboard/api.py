@@ -18,10 +18,11 @@ def metric_series_payload(store: DashboardStore, run_id: str, tag: str | None = 
 def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
     run = store.get_run(run_id)
     if run is None:
-        return {"run": None, "checkpoints": [], "metrics": [], "parent_lineage": [], "child_lineage": []}
+        return {"run": None, "checkpoints": [], "metrics": [], "artifacts": [], "parent_lineage": [], "child_lineage": []}
     return {
         "run": run,
         "checkpoints": store.list_checkpoints(run_id),
+        "artifacts": store.list_run_artifacts(run_id),
         "metrics": store.list_metric_summaries(run_id),
         "parent_lineage": store.list_lineage(run_id),
         "child_lineage": store.list_child_lineage(run_id),

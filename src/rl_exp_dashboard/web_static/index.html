@@ -356,6 +356,12 @@
           <h3 class="subhead">Checkpoints</h3>
           ${checkpointTable(payload.checkpoints || [])}
 
+          <h3 class="subhead">Videos</h3>
+          ${videoTable(payload.artifacts || [])}
+
+          <h3 class="subhead">Artifacts</h3>
+          ${artifactTable(payload.artifacts || [])}
+
           <h3 class="subhead">Checkpoint Reviews</h3>
           ${checkpointReviewPanel(run.run_id, payload.checkpoints || [], payload.checkpoint_reviews || [])}
 
@@ -541,6 +547,40 @@
                       <td>${escapeHtml(checkpoint.path.split('/').pop())}</td>
                       <td>${checkpoint.iteration ?? ''}</td>
                       <td>${checkpoint.is_latest ? 'yes' : ''}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function videoTable(artifacts) {
+        const videos = (artifacts || []).filter((artifact) => artifact.kind === 'video');
+        if (videos.length === 0) return `<div class="empty">No videos indexed for this run.</div>`;
+        return artifactRows(videos);
+      }
+
+      function artifactTable(artifacts) {
+        const exportedArtifacts = (artifacts || []).filter((artifact) => artifact.kind !== 'video');
+        if (exportedArtifacts.length === 0) return `<div class="empty">No exported artifacts indexed for this run.</div>`;
+        return artifactRows(exportedArtifacts);
+      }
+
+      function artifactRows(artifacts) {
+        return `
+          <table>
+            <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Path</th></tr></thead>
+            <tbody>
+              ${artifacts
+                .map(
+                  (artifact) => `
+                    <tr>
+                      <td>${escapeHtml(artifact.name || artifact.path.split('/').pop())}</td>
+                      <td>${escapeHtml(artifact.suffix || artifact.kind)}</td>
+                      <td>${formatBytes(artifact.size_bytes)}</td>
+                      <td>${escapeHtml(artifact.path)}</td>
                     </tr>
                   `,
                 )
@@ -746,6 +786,13 @@
       function formatNumber(value) {
         if (value === null || value === undefined) return '';
         return Number(value).toPrecision(5);
+      }
+
+      function formatBytes(value) {
+        const bytes = Number(value || 0);
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
       }
 
       function formatValue(value) {

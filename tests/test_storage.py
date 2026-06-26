@@ -14,7 +14,13 @@ class DashboardStoreTests(unittest.TestCase):
             run_path = Path(tmp) / "logs" / "group" / "child"
             run_path.mkdir(parents=True)
             checkpoint_path = run_path / "model_100.pt"
+            video_path = run_path / "videos" / "play" / "rl-video-step-0.mp4"
+            artifact_path = run_path / "exports" / "policy.onnx"
             checkpoint_path.write_bytes(b"checkpoint")
+            video_path.parent.mkdir(parents=True)
+            artifact_path.parent.mkdir(parents=True)
+            video_path.write_bytes(b"video")
+            artifact_path.write_bytes(b"onnx")
 
             store = DashboardStore(db_path)
             store.initialize()
@@ -68,6 +74,8 @@ class DashboardStoreTests(unittest.TestCase):
                             original_count=2,
                         )
                     ],
+                    videos=[video_path],
+                    artifacts=[artifact_path],
                 ),
             )
             store.upsert_lineage(
@@ -86,6 +94,7 @@ class DashboardStoreTests(unittest.TestCase):
             checkpoints = store.list_checkpoints("group/child")
             metrics = store.list_metric_summaries("group/child")
             series = store.list_metric_series("group/child")
+            artifacts = store.list_run_artifacts("group/child")
             lineage = store.list_lineage("group/child")
 
         self.assertEqual(child["latest_checkpoint"], "model_100.pt")
@@ -100,6 +109,10 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(series[0]["tag"], "Train/mean_reward")
         self.assertEqual(series[0]["points"], [{"step": 0, "value": 1.0}, {"step": 100, "value": 5.0}])
         self.assertEqual(series[0]["original_count"], 2)
+        self.assertEqual([artifact["kind"] for artifact in artifacts], ["artifact", "video"])
+        self.assertEqual([Path(artifact["path"]).name for artifact in artifacts], ["policy.onnx", "rl-video-step-0.mp4"])
+        self.assertEqual(artifacts[1]["suffix"], ".mp4")
+        self.assertEqual(artifacts[1]["size_bytes"], 5)
         self.assertEqual(lineage[0]["parent_run_id"], "group/parent")
         self.assertEqual(lineage[0]["relationship"], "finetune")
         self.assertEqual(lineage[0]["intended_change"], "lower entropy")

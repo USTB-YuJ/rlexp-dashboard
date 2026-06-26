@@ -211,6 +211,22 @@
 - [x] **Step 3: Wire non-dry-run `rl-exp-dashboard sync` to execute the plan and record completed/failed status.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 13: Video and Artifact Persistence
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing tests for persisting indexed videos/artifacts, returning them in run detail, and showing them in the bundled dashboard.**
+- [x] **Step 2: Add `run_artifacts` SQLite persistence with `kind=video/artifact`.**
+- [x] **Step 3: Include artifacts in run detail payload.**
+- [x] **Step 4: Render Videos and Artifacts sections in the bundled dashboard.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
