@@ -679,6 +679,18 @@
 - [x] **Step 4: Refresh scoped panels when the project scope changes and after project/index/sync actions.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 46: Rich Checkpoint Review UI
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for checkpoint score, recommended flag, and video path UI.**
+- [x] **Step 2: Render score, recommended, and video path in checkpoint review rows.**
+- [x] **Step 3: Add checkpoint review form controls for score and recommended status, preserving video path submission.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

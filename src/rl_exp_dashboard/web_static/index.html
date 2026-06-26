@@ -1740,7 +1740,7 @@
           reviews.length === 0
             ? `<div class="empty">No checkpoint reviews yet.</div>`
             : `<table>
-                <thead><tr><th>Checkpoint</th><th>Status</th><th>Tags</th><th>Notes</th></tr></thead>
+                <thead><tr><th>Checkpoint</th><th>Status</th><th>Score</th><th>Recommended</th><th>Tags</th><th>Video</th><th>Notes</th></tr></thead>
                 <tbody>
                   ${reviews
                     .map(
@@ -1748,7 +1748,10 @@
                         <tr>
                           <td>${escapeHtml(review.checkpoint)}</td>
                           <td>${escapeHtml(review.status)}</td>
+                          <td>${formatNumber(review.score)}</td>
+                          <td>${review.recommended ? 'yes' : ''}</td>
                           <td>${escapeHtml((review.tags || []).join(', '))}</td>
+                          <td>${escapeHtml(review.video_path || '')}</td>
                           <td>${escapeHtml(review.notes || '')}</td>
                         </tr>
                       `,
@@ -1791,6 +1794,19 @@
                 <input name="video_path" />
               </label>
             </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Score</div>
+                <input name="score" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label>
+                <div class="label">Recommended</div>
+                <select name="recommended">
+                  ${option('false', 'false')}
+                  ${option('true', 'false')}
+                </select>
+              </label>
+            </div>
             <div class="form-actions">
               <button type="submit">Save Checkpoint Review</button>
             </div>
@@ -1826,6 +1842,8 @@
               notes: form.get('notes'),
               tags: splitTags(form.get('tags')),
               video_path: form.get('video_path'),
+              score: form.get('score') ? Number(form.get('score')) : null,
+              recommended: form.get('recommended') === 'true',
             });
             await loadRunDetail(runId);
           });

@@ -112,6 +112,11 @@ class StaticDashboardTests(unittest.TestCase):
         self.assertIn("Open", html)
         self.assertIn("Manual Observation", html)
         self.assertIn("Checkpoint Reviews", html)
+        self.assertIn("<th>Score</th>", html)
+        self.assertIn("<th>Recommended</th>", html)
+        self.assertIn("<th>Video</th>", html)
+        self.assertIn("name=\"score\"", html)
+        self.assertIn("name=\"recommended\"", html)
         self.assertIn("/api/run-observation", html)
         self.assertIn("/api/checkpoint-review", html)
 
