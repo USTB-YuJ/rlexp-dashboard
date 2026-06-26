@@ -1,0 +1,96 @@
+# RL Experiment Dashboard Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Build the first usable local-first RL experiment dashboard foundation from the approved design: package skeleton, local run indexing, config diffing, SQLite metadata storage, API/CLI skeleton, and a minimal dashboard shell.
+
+**Architecture:** Start with a Python package under `src/rl_exp_dashboard`. The first milestone keeps the parser/indexer/storage/test loop independent from heavy optional dependencies. FastAPI, TensorBoard, PyYAML, and the React frontend are integrated behind optional runtime boundaries so core behavior remains testable with the standard library.
+
+**Tech Stack:** Python 3.9+, SQLite, argparse, unittest, optional FastAPI/uvicorn/PyYAML/tensorboard, later React/Vite.
+
+---
+
+## File Structure
+
+- `pyproject.toml`: package metadata, console script, optional dependencies.
+- `src/rl_exp_dashboard/__init__.py`: package version.
+- `src/rl_exp_dashboard/models.py`: dataclasses for runs, checkpoints, params, metrics, lineage.
+- `src/rl_exp_dashboard/config_diff.py`: flatten nested configs and compute structured diffs.
+- `src/rl_exp_dashboard/structured_loader.py`: JSON/YAML loading with PyYAML when available and a small fallback parser for simple configs.
+- `src/rl_exp_dashboard/indexer.py`: discover local training runs, params, checkpoints, videos, and event files.
+- `src/rl_exp_dashboard/storage.py`: SQLite schema and repository methods.
+- `src/rl_exp_dashboard/api.py`: FastAPI app factory, optional dependency.
+- `src/rl_exp_dashboard/cli.py`: `rl-exp-dashboard` command.
+- `src/rl_exp_dashboard/web_static/index.html`: minimal bundled dashboard shell for early smoke testing.
+- `tests/test_config_diff.py`: tests config flattening/diff behavior.
+- `tests/test_indexer.py`: tests local run discovery.
+- `tests/test_storage.py`: tests SQLite persistence and lineage.
+- `tests/test_cli.py`: tests CLI index command output.
+
+## Task 1: Config Diff Core
+
+**Files:**
+- Create: `tests/test_config_diff.py`
+- Create: `src/rl_exp_dashboard/config_diff.py`
+- Create: `src/rl_exp_dashboard/models.py`
+
+- [x] **Step 1: Write failing tests for flattening and diffing.**
+- [x] **Step 2: Run tests and confirm import failure.**
+- [x] **Step 3: Implement `flatten_config()` and `diff_configs()`.**
+- [x] **Step 4: Run tests and confirm pass.**
+
+## Task 2: Local Run Indexer
+
+**Files:**
+- Create: `tests/test_indexer.py`
+- Create: `src/rl_exp_dashboard/structured_loader.py`
+- Create: `src/rl_exp_dashboard/indexer.py`
+
+- [x] **Step 1: Write failing tests using a synthetic RSL-RL-like log directory.**
+- [x] **Step 2: Run tests and confirm missing indexer failure.**
+- [x] **Step 3: Implement run discovery, params loading, checkpoint detection, event/video detection.**
+- [x] **Step 4: Run tests and confirm pass.**
+
+## Task 3: SQLite Storage and Lineage
+
+**Files:**
+- Create: `tests/test_storage.py`
+- Create: `src/rl_exp_dashboard/storage.py`
+
+- [x] **Step 1: Write failing tests for project/run/checkpoint persistence and lineage edge persistence.**
+- [x] **Step 2: Run tests and confirm storage module failure.**
+- [x] **Step 3: Implement schema initialization and repository methods.**
+- [x] **Step 4: Run tests and confirm pass.**
+
+## Task 4: CLI and Minimal API Shell
+
+**Files:**
+- Create: `tests/test_cli.py`
+- Create: `src/rl_exp_dashboard/cli.py`
+- Create: `src/rl_exp_dashboard/api.py`
+- Create: `src/rl_exp_dashboard/web_static/index.html`
+- Create: `src/rl_exp_dashboard/__init__.py`
+- Create: `pyproject.toml`
+
+- [x] **Step 1: Write failing tests for `rl-exp-dashboard index --log-root ... --db ...`.**
+- [x] **Step 2: Run tests and confirm CLI is missing.**
+- [x] **Step 3: Implement package metadata, CLI, optional FastAPI app factory, and static HTML shell.**
+- [x] **Step 4: Run all tests and confirm pass.**
+
+## Task 5: Verification and Commit
+
+**Files:**
+- All files above.
+
+- [x] **Step 1: Run `python3 -m unittest discover -s tests`.**
+- [x] **Step 2: Run `python3 -m compileall src tests`.**
+- [x] **Step 3: Inspect `git diff --stat` and `git status --short`.**
+- [x] **Step 4: Commit only dashboard implementation files.**
+
+## Later Milestones
+
+- TensorBoard scalar parser and sampled metric series.
+- Remote sync with SSH/rsync/scp.
+- React/Vite frontend.
+- Run detail, compare, lineage graph, checkpoint review UI.
+- Packaged frontend build pipeline and Dockerfile.

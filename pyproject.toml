@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-exp-dashboard"
+version = "0.1.0"
+description = "Local-first dashboard for robot reinforcement learning experiment logs."
+readme = "docs/superpowers/specs/2026-06-26-rl-experiment-dashboard-design.md"
+requires-python = ">=3.9"
+authors = [{ name = "RL Experiment Dashboard Contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+server = ["fastapi>=0.110", "uvicorn>=0.27"]
+parsers = ["PyYAML>=6.0", "tensorboard>=2.15"]
+dev = ["PyYAML>=6.0", "tensorboard>=2.15", "fastapi>=0.110", "uvicorn>=0.27"]
+
+[project.scripts]
+rl-exp-dashboard = "rl_exp_dashboard.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+rl_exp_dashboard = ["web_static/*.html"]

@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+
+@dataclass(frozen=True)
+class ConfigDiff:
+    path: str
+    kind: str
+    before: Any = None
+    after: Any = None
+
+
+@dataclass(frozen=True)
+class CheckpointRecord:
+    path: Path
+    iteration: Optional[int]
+    size_bytes: int
+    modified_time: float
+    is_latest: bool = False
+
+
+@dataclass(frozen=True)
+class RunRecord:
+    run_id: str
+    name: str
+    group: str
+    path: Path
+    modified_time: float
+    params: Dict[str, Any] = field(default_factory=dict)
+    param_files: List[Path] = field(default_factory=list)
+    event_files: List[Path] = field(default_factory=list)
+    checkpoints: List[CheckpointRecord] = field(default_factory=list)
+    videos: List[Path] = field(default_factory=list)
+    artifacts: List[Path] = field(default_factory=list)
+    parent_run_id: Optional[str] = None
+    parent_checkpoint: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class LineageEdge:
+    parent_run_id: str
+    child_run_id: str
+    relationship: str = "manual-link"
+    parent_checkpoint: Optional[str] = None
+    intended_change: str = ""
+    note: str = ""
+    confirmed: bool = True
