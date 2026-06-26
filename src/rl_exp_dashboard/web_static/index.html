@@ -152,6 +152,15 @@
         display: flex;
         justify-content: flex-end;
       }
+      .wide-section {
+        grid-column: 1 / -1;
+      }
+      .compare-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: end;
+      }
       .metric-chart-panel {
         border: 1px solid var(--line);
         border-radius: 6px;
@@ -182,6 +191,9 @@
       }
       @media (max-width: 920px) {
         main {
+          grid-template-columns: 1fr;
+        }
+        .compare-controls {
           grid-template-columns: 1fr;
         }
       }
@@ -225,13 +237,41 @@
           <div class="empty">Select a run to inspect metrics, checkpoints, and lineage.</div>
         </div>
       </section>
+
+      <section class="wide-section">
+        <div class="section-head">
+          <h2>Compare Runs</h2>
+          <span class="muted">Config Diffs and Metric Deltas</span>
+        </div>
+        <div class="detail">
+          <div class="compare-controls">
+            <label>
+              <div class="label">Baseline</div>
+              <select id="compare-before-run"></select>
+            </label>
+            <label>
+              <div class="label">Target</div>
+              <select id="compare-after-run"></select>
+            </label>
+            <button type="button" id="compare-runs">Compare</button>
+          </div>
+          <div id="compare-result" class="detail">
+            <div class="empty">Select two runs to compare config changes and metric deltas.</div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script>
       const runTableBody = document.getElementById('run-table-body');
       const runDetail = document.getElementById('run-detail');
       const selectedRun = document.getElementById('selected-run');
+      const compareBeforeRun = document.getElementById('compare-before-run');
+      const compareAfterRun = document.getElementById('compare-after-run');
+      const compareResult = document.getElementById('compare-result');
+      let indexedRuns = [];
       document.getElementById('refresh-runs').addEventListener('click', loadRuns);
+      document.getElementById('compare-runs').addEventListener('click', loadCompareResult);
 
       async function loadRuns() {
         runTableBody.innerHTML = `<tr><td colspan="4" class="empty">Loading runs...</td></tr>`;
@@ -241,6 +281,8 @@
       }
 
       function renderRuns(runs) {
+        indexedRuns = runs;
+        populateCompareSelectors(runs);
         if (runs.length === 0) {
           runTableBody.innerHTML = `<tr><td colspan="4" class="empty">No indexed runs yet.</td></tr>`;
           return;
@@ -260,6 +302,20 @@
         for (const row of runTableBody.querySelectorAll('tr[data-run-id]')) {
           row.addEventListener('click', () => loadRunDetail(row.dataset.runId));
         }
+      }
+
+      function populateCompareSelectors(runs) {
+        const previousBefore = compareBeforeRun.value;
+        const previousAfter = compareAfterRun.value;
+        const options = runs.map((run) => `<option value="${escapeHtml(run.run_id)}">${escapeHtml(run.run_id)}</option>`).join('');
+        compareBeforeRun.innerHTML = options;
+        compareAfterRun.innerHTML = options;
+        if (runs.length === 0) {
+          compareResult.innerHTML = `<div class="empty">No indexed runs available for comparison.</div>`;
+          return;
+        }
+        compareBeforeRun.value = runs.some((run) => run.run_id === previousBefore) ? previousBefore : runs[Math.min(1, runs.length - 1)].run_id;
+        compareAfterRun.value = runs.some((run) => run.run_id === previousAfter) ? previousAfter : runs[0].run_id;
       }
 
       async function loadRunDetail(runId) {
@@ -307,6 +363,76 @@
           ${lineageTable(payload.parent_lineage || [], payload.child_lineage || [])}
         `;
         bindObservationForms(run.run_id);
+      }
+
+      async function loadCompareResult() {
+        const beforeRunId = compareBeforeRun.value;
+        const afterRunId = compareAfterRun.value;
+        if (!beforeRunId || !afterRunId) {
+          compareResult.innerHTML = `<div class="empty">Select two runs before comparing.</div>`;
+          return;
+        }
+        compareResult.innerHTML = `<div class="empty">Loading comparison...</div>`;
+        const response = await fetch(
+          `/api/compare?before_run_id=${encodeURIComponent(beforeRunId)}&after_run_id=${encodeURIComponent(afterRunId)}`,
+        );
+        const payload = await response.json();
+        renderCompareResult(payload);
+      }
+
+      function renderCompareResult(payload) {
+        compareResult.innerHTML = `
+          <h3 class="subhead">Config Diffs</h3>
+          ${configDiffTable(payload.config_diffs || [])}
+          <h3 class="subhead">Metric Deltas</h3>
+          ${metricDeltaTable(payload.metric_deltas || [])}
+        `;
+      }
+
+      function configDiffTable(diffs) {
+        if (diffs.length === 0) return `<div class="empty">No config differences detected.</div>`;
+        return `
+          <table>
+            <thead><tr><th>Path</th><th>Kind</th><th>Before</th><th>After</th></tr></thead>
+            <tbody>
+              ${diffs
+                .map(
+                  (diff) => `
+                    <tr>
+                      <td>${escapeHtml(diff.path)}</td>
+                      <td>${escapeHtml(diff.kind)}</td>
+                      <td>${escapeHtml(formatValue(diff.before))}</td>
+                      <td>${escapeHtml(formatValue(diff.after))}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function metricDeltaTable(deltas) {
+        if (deltas.length === 0) return `<div class="empty">No metric deltas available.</div>`;
+        return `
+          <table>
+            <thead><tr><th>Tag</th><th>Baseline Last</th><th>Target Last</th><th>Delta</th></tr></thead>
+            <tbody>
+              ${deltas
+                .map(
+                  (delta) => `
+                    <tr>
+                      <td>${escapeHtml(delta.tag)}</td>
+                      <td>${formatNumber(delta.before_last_value)}</td>
+                      <td>${formatNumber(delta.after_last_value)}</td>
+                      <td>${formatNumber(delta.delta_last_value)}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
       }
 
       function field(label, value) {
@@ -620,6 +746,12 @@
       function formatNumber(value) {
         if (value === null || value === undefined) return '';
         return Number(value).toPrecision(5);
+      }
+
+      function formatValue(value) {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'object') return JSON.stringify(value);
+        return String(value);
       }
 
       function escapeHtml(value) {

@@ -187,6 +187,17 @@
 - [x] **Step 5: Add a minimal SVG trend chart to the bundled dashboard.**
 - [x] **Step 6: Run targeted and full verification, then commit.**
 
+## Task 11: Bundled Compare Runs UI
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing static dashboard tests for two-run compare controls and `/api/compare` usage.**
+- [x] **Step 2: Add baseline/target selectors backed by indexed run IDs.**
+- [x] **Step 3: Render config diffs and metric last-value deltas from the existing compare API.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - Actual remote sync execution with SSH/rsync/scp.

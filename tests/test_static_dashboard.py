@@ -21,6 +21,20 @@ class StaticDashboardTests(unittest.TestCase):
         self.assertIn("/api/run-observation", html)
         self.assertIn("/api/checkpoint-review", html)
 
+    def test_index_html_contains_compare_runs_panel_and_api_call(self):
+        html = Path("src/rl_exp_dashboard/web_static/index.html").read_text(encoding="utf-8")
+
+        self.assertIn("Compare Runs", html)
+        self.assertIn("id=\"compare-before-run\"", html)
+        self.assertIn("id=\"compare-after-run\"", html)
+        self.assertIn("id=\"compare-result\"", html)
+        self.assertIn("/api/compare", html)
+        self.assertIn("before_run_id", html)
+        self.assertIn("after_run_id", html)
+        self.assertIn("renderCompareResult", html)
+        self.assertIn("Config Diffs", html)
+        self.assertIn("Metric Deltas", html)
+
 
 if __name__ == "__main__":
     unittest.main()
