@@ -1392,6 +1392,12 @@
           <h3 class="subhead">Git Metadata</h3>
           ${gitPanel(run.git || {})}
 
+          <h3 class="subhead">Reward Summary</h3>
+          ${rewardSummaryTable(payload.config_summary?.rewards || [])}
+
+          <h3 class="subhead">Termination Summary</h3>
+          ${terminationSummaryTable(payload.config_summary?.terminations || [])}
+
           <h3 class="subhead">Params Browser</h3>
           ${paramsTable(run.params || {})}
 
@@ -1543,6 +1549,52 @@
             ${field('Dirty', git.dirty === undefined ? '' : String(git.dirty))}
             ${field('Diff', git.diff || '')}
           </div>
+        `;
+      }
+
+      function rewardSummaryTable(rewards) {
+        if (!rewards || rewards.length === 0) return `<div class="empty">No reward config summary found in params.</div>`;
+        return `
+          <table>
+            <thead><tr><th>Reward</th><th>Weight</th><th>Params</th><th>Path</th></tr></thead>
+            <tbody>
+              ${rewards
+                .map(
+                  (reward) => `
+                    <tr>
+                      <td>${escapeHtml(reward.name)}</td>
+                      <td>${escapeHtml(formatValue(reward.weight))}</td>
+                      <td>${escapeHtml(formatValue(reward.params || {}))}</td>
+                      <td>${escapeHtml(reward.path || '')}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function terminationSummaryTable(terminations) {
+        if (!terminations || terminations.length === 0) return `<div class="empty">No termination config summary found in params.</div>`;
+        return `
+          <table>
+            <thead><tr><th>Termination</th><th>Timeout</th><th>Params</th><th>Path</th></tr></thead>
+            <tbody>
+              ${terminations
+                .map(
+                  (termination) => `
+                    <tr>
+                      <td>${escapeHtml(termination.name)}</td>
+                      <td>${escapeHtml(formatValue(termination.time_out))}</td>
+                      <td>${escapeHtml(formatValue(termination.params || {}))}</td>
+                      <td>${escapeHtml(termination.path || '')}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
         `;
       }
 

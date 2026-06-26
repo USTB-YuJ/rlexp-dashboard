@@ -117,6 +117,7 @@ def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
         "parent_lineage": parent_lineage,
         "child_lineage": child_lineage,
         "parent_compare": _parent_compare_summary(store, run, parent_lineage),
+        "config_summary": _run_config_summary(run.get("params", {})),
         "observation": store.get_run_observation(run_id),
         "checkpoint_reviews": store.list_checkpoint_reviews(run_id),
     }
@@ -183,6 +184,86 @@ def _config_diff_group_key(path: str) -> str | None:
     if ".curriculum." in normalized or ".termination." in normalized or ".terminations." in normalized:
         return "curriculum_termination"
     return None
+
+
+def _run_config_summary(params: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "rewards": _reward_summary(params),
+        "terminations": _termination_summary(params),
+    }
+
+
+def _reward_summary(params: Dict[str, Any]) -> list[Dict[str, Any]]:
+    entries: list[Dict[str, Any]] = []
+    for section_path, section in _iter_config_sections(params, {"reward", "rewards"}):
+        for name, value in section.items():
+            entry_path = ".".join([*section_path, str(name)])
+            entries.append(
+                {
+                    "name": str(name),
+                    "path": entry_path,
+                    "weight": _config_term_number(value, ("weight", "scale")),
+                    "params": _config_term_params(value),
+                }
+            )
+    return sorted(entries, key=lambda item: item["path"])
+
+
+def _termination_summary(params: Dict[str, Any]) -> list[Dict[str, Any]]:
+    entries: list[Dict[str, Any]] = []
+    for section_path, section in _iter_config_sections(params, {"termination", "terminations"}):
+        for name, value in section.items():
+            entry_path = ".".join([*section_path, str(name)])
+            entries.append(
+                {
+                    "name": str(name),
+                    "path": entry_path,
+                    "time_out": _config_term_bool(value, "time_out"),
+                    "params": _config_term_params(value),
+                }
+            )
+    return sorted(entries, key=lambda item: item["path"])
+
+
+def _iter_config_sections(
+    value: Any,
+    section_names: set[str],
+    path: tuple[str, ...] = (),
+) -> list[tuple[tuple[str, ...], Dict[str, Any]]]:
+    sections: list[tuple[tuple[str, ...], Dict[str, Any]]] = []
+    if not isinstance(value, dict):
+        return sections
+    for key, child in value.items():
+        child_path = (*path, str(key))
+        if str(key).lower() in section_names and isinstance(child, dict):
+            sections.append((child_path, child))
+        sections.extend(_iter_config_sections(child, section_names, child_path))
+    return sections
+
+
+def _config_term_number(value: Any, field_names: tuple[str, ...]) -> Any:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value
+    if not isinstance(value, dict):
+        return None
+    for field_name in field_names:
+        candidate = value.get(field_name)
+        if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
+            return candidate
+    return None
+
+
+def _config_term_bool(value: Any, field_name: str) -> Any:
+    if isinstance(value, dict) and isinstance(value.get(field_name), bool):
+        return value[field_name]
+    return None
+
+
+def _config_term_params(value: Any) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    params = value.get("params", {})
+    return params if isinstance(params, dict) else {}
 
 
 def _parent_compare_summary(

@@ -211,6 +211,53 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual([artifact["kind"] for artifact in payload["artifacts"]], ["artifact", "video"])
         self.assertEqual([Path(artifact["path"]).name for artifact in payload["artifacts"]], ["policy.onnx", "model_20.mp4"])
 
+    def test_run_detail_payload_includes_reward_and_termination_config_summaries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            store = DashboardStore(tmp_path / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project("project", tmp_path / "cache")
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/run",
+                    name="run",
+                    group="group",
+                    path=tmp_path / "run",
+                    modified_time=1.0,
+                    params={
+                        "env": {
+                            "rewards": {
+                                "track_lin_vel_xy_exp": {
+                                    "weight": 1.5,
+                                    "params": {"std": 0.5},
+                                },
+                                "joint_acc_l2": {"weight": -1e-7},
+                            },
+                            "terminations": {
+                                "body_height": {
+                                    "time_out": False,
+                                    "params": {"min_height": 0.4},
+                                },
+                                "time_out": {"time_out": True},
+                            },
+                        }
+                    },
+                ),
+            )
+
+            payload = run_detail_payload(store, "group/run")
+
+        rewards = {item["name"]: item for item in payload["config_summary"]["rewards"]}
+        terminations = {item["name"]: item for item in payload["config_summary"]["terminations"]}
+        self.assertEqual(rewards["track_lin_vel_xy_exp"]["weight"], 1.5)
+        self.assertEqual(rewards["track_lin_vel_xy_exp"]["params"], {"std": 0.5})
+        self.assertEqual(rewards["joint_acc_l2"]["weight"], -1e-7)
+        self.assertEqual(rewards["joint_acc_l2"]["path"], "env.rewards.joint_acc_l2")
+        self.assertEqual(terminations["body_height"]["time_out"], False)
+        self.assertEqual(terminations["body_height"]["params"], {"min_height": 0.4})
+        self.assertEqual(terminations["time_out"]["time_out"], True)
+
     def test_run_detail_payload_includes_parent_comparison_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))

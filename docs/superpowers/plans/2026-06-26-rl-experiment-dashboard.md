@@ -719,6 +719,20 @@
 - [x] **Step 3: Render Tags in the bundled run table and add a client-side tag filter/search integration.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 49: Run Detail Reward And Termination Summaries
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for run detail reward/termination summary payloads and dashboard panels.**
+- [x] **Step 2: Extract compact reward weights and termination entries from indexed params.**
+- [x] **Step 3: Render Reward Summary and Termination Summary panels before the full params browser.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
