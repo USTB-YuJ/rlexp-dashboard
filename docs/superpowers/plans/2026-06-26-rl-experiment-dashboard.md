@@ -270,6 +270,17 @@
 - [x] **Step 3: Add video preview embeds and open links for indexed artifacts in the bundled dashboard.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 17: Run Table Filtering and Sorting
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing static dashboard tests for run search, project/group filters, sort controls, and filtered rendering hook.**
+- [x] **Step 2: Add client-side run search, project filter, group filter, and modified/name sort controls.**
+- [x] **Step 3: Wire controls to the indexed run list without changing the existing API.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

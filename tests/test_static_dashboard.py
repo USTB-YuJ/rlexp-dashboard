@@ -7,6 +7,11 @@ class StaticDashboardTests(unittest.TestCase):
         html = Path("src/rl_exp_dashboard/web_static/index.html").read_text(encoding="utf-8")
 
         self.assertIn("id=\"run-table\"", html)
+        self.assertIn("id=\"run-search\"", html)
+        self.assertIn("id=\"project-filter\"", html)
+        self.assertIn("id=\"group-filter\"", html)
+        self.assertIn("id=\"run-sort\"", html)
+        self.assertIn("renderFilteredRuns", html)
         self.assertIn("id=\"run-detail\"", html)
         self.assertIn("fetch('/api/runs')", html)
         self.assertIn("fetch(`/api/run-detail?run_id=${encodeURIComponent(runId)}`)", html)

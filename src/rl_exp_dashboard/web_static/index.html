@@ -152,6 +152,13 @@
         display: flex;
         justify-content: flex-end;
       }
+      .table-controls {
+        display: grid;
+        grid-template-columns: minmax(180px, 1.2fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(140px, 0.8fr);
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+      }
       .wide-section {
         grid-column: 1 / -1;
       }
@@ -203,6 +210,9 @@
         .compare-controls {
           grid-template-columns: 1fr;
         }
+        .table-controls {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -217,6 +227,29 @@
         <div class="section-head">
           <h2>Runs</h2>
           <button type="button" id="refresh-runs">Refresh</button>
+        </div>
+        <div class="table-controls">
+          <label>
+            <div class="label">Search</div>
+            <input id="run-search" placeholder="Run, project, checkpoint" />
+          </label>
+          <label>
+            <div class="label">Project</div>
+            <select id="project-filter"></select>
+          </label>
+          <label>
+            <div class="label">Group</div>
+            <select id="group-filter"></select>
+          </label>
+          <label>
+            <div class="label">Sort</div>
+            <select id="run-sort">
+              <option value="modified-desc">Modified newest</option>
+              <option value="modified-asc">Modified oldest</option>
+              <option value="run-id-asc">Run ID A-Z</option>
+              <option value="run-id-desc">Run ID Z-A</option>
+            </select>
+          </label>
         </div>
         <table id="run-table" aria-label="Indexed runs">
           <thead>
@@ -273,12 +306,20 @@
       const runTableBody = document.getElementById('run-table-body');
       const runDetail = document.getElementById('run-detail');
       const selectedRun = document.getElementById('selected-run');
+      const runSearch = document.getElementById('run-search');
+      const projectFilter = document.getElementById('project-filter');
+      const groupFilter = document.getElementById('group-filter');
+      const runSort = document.getElementById('run-sort');
       const compareBeforeRun = document.getElementById('compare-before-run');
       const compareAfterRun = document.getElementById('compare-after-run');
       const compareResult = document.getElementById('compare-result');
       let indexedRuns = [];
       document.getElementById('refresh-runs').addEventListener('click', loadRuns);
       document.getElementById('compare-runs').addEventListener('click', loadCompareResult);
+      runSearch.addEventListener('input', renderFilteredRuns);
+      projectFilter.addEventListener('change', renderFilteredRuns);
+      groupFilter.addEventListener('change', renderFilteredRuns);
+      runSort.addEventListener('change', renderFilteredRuns);
 
       async function loadRuns() {
         runTableBody.innerHTML = `<tr><td colspan="4" class="empty">Loading runs...</td></tr>`;
@@ -290,8 +331,25 @@
       function renderRuns(runs) {
         indexedRuns = runs;
         populateCompareSelectors(runs);
+        populateRunFilters(runs);
+        renderFilteredRuns();
+      }
+
+      function renderFilteredRuns() {
+        const search = runSearch.value.trim().toLowerCase();
+        const project = projectFilter.value;
+        const group = groupFilter.value;
+        let runs = indexedRuns.filter((run) => {
+          const searchable = [run.run_id, run.project_name, run.group, run.latest_checkpoint].join(' ').toLowerCase();
+          return (
+            (!search || searchable.includes(search)) &&
+            (!project || run.project_name === project) &&
+            (!group || run.group === group)
+          );
+        });
+        runs = sortRuns(runs, runSort.value);
         if (runs.length === 0) {
-          runTableBody.innerHTML = `<tr><td colspan="4" class="empty">No indexed runs yet.</td></tr>`;
+          runTableBody.innerHTML = `<tr><td colspan="4" class="empty">No runs match the current filters.</td></tr>`;
           return;
         }
         runTableBody.innerHTML = runs
@@ -309,6 +367,32 @@
         for (const row of runTableBody.querySelectorAll('tr[data-run-id]')) {
           row.addEventListener('click', () => loadRunDetail(row.dataset.runId));
         }
+      }
+
+      function populateRunFilters(runs) {
+        populateSelect(projectFilter, uniqueValues(runs.map((run) => run.project_name)), 'All projects');
+        populateSelect(groupFilter, uniqueValues(runs.map((run) => run.group)), 'All groups');
+      }
+
+      function populateSelect(select, values, emptyLabel) {
+        const previous = select.value;
+        select.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>${values
+          .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+          .join('')}`;
+        select.value = values.includes(previous) ? previous : '';
+      }
+
+      function uniqueValues(values) {
+        return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
+      }
+
+      function sortRuns(runs, mode) {
+        const sorted = [...runs];
+        if (mode === 'modified-asc') sorted.sort((a, b) => Number(a.modified_time || 0) - Number(b.modified_time || 0));
+        else if (mode === 'run-id-asc') sorted.sort((a, b) => String(a.run_id).localeCompare(String(b.run_id)));
+        else if (mode === 'run-id-desc') sorted.sort((a, b) => String(b.run_id).localeCompare(String(a.run_id)));
+        else sorted.sort((a, b) => Number(b.modified_time || 0) - Number(a.modified_time || 0));
+        return sorted;
       }
 
       function populateCompareSelectors(runs) {
