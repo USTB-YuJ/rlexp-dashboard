@@ -290,6 +290,16 @@
 
       <section class="wide-section">
         <div class="section-head">
+          <h2>Lineage Overview</h2>
+          <button type="button" id="refresh-lineage">Refresh</button>
+        </div>
+        <div id="lineage-overview" class="detail">
+          <div class="empty">Loading lineage...</div>
+        </div>
+      </section>
+
+      <section class="wide-section">
+        <div class="section-head">
           <h2>Compare Runs</h2>
           <span class="muted">Config Diffs and Metric Deltas</span>
         </div>
@@ -324,9 +334,11 @@
       const compareAfterRun = document.getElementById('compare-after-run');
       const compareResult = document.getElementById('compare-result');
       const remoteSources = document.getElementById('remote-sources');
+      const lineageOverview = document.getElementById('lineage-overview');
       let indexedRuns = [];
       document.getElementById('refresh-runs').addEventListener('click', loadRuns);
       document.getElementById('refresh-remote-sources').addEventListener('click', loadRemoteSources);
+      document.getElementById('refresh-lineage').addEventListener('click', loadLineageOverview);
       document.getElementById('compare-runs').addEventListener('click', loadCompareResult);
       runSearch.addEventListener('input', renderFilteredRuns);
       projectFilter.addEventListener('change', renderFilteredRuns);
@@ -387,6 +399,51 @@
                 .join('')}
             </tbody>
           </table>
+        `;
+      }
+
+      async function loadLineageOverview() {
+        lineageOverview.innerHTML = `<div class="empty">Loading lineage...</div>`;
+        const response = await fetch('/api/lineage');
+        const payload = await response.json();
+        renderLineageOverview(payload);
+      }
+
+      function renderLineageOverview(payload) {
+        const nodes = payload.nodes || [];
+        const edges = payload.edges || [];
+        if (nodes.length === 0) {
+          lineageOverview.innerHTML = `<div class="empty">No indexed runs available for lineage.</div>`;
+          return;
+        }
+        const edgeRows =
+          edges.length === 0
+            ? `<div class="empty">No lineage links recorded.</div>`
+            : `<table aria-label="Lineage edges">
+                <thead><tr><th>Parent</th><th>Child</th><th>Type</th><th>Checkpoint</th><th>Change</th></tr></thead>
+                <tbody>
+                  ${edges
+                    .map(
+                      (edge) => `
+                        <tr>
+                          <td>${escapeHtml(edge.parent_run_id)}</td>
+                          <td>${escapeHtml(edge.child_run_id)}</td>
+                          <td>${escapeHtml(edge.relationship || '')}</td>
+                          <td>${escapeHtml(edge.parent_checkpoint || '')}</td>
+                          <td>${escapeHtml(edge.intended_change || '')}</td>
+                        </tr>
+                      `,
+                    )
+                    .join('')}
+                </tbody>
+              </table>`;
+        lineageOverview.innerHTML = `
+          <div class="grid">
+            ${field('Runs', nodes.length)}
+            ${field('Lineage Links', edges.length)}
+          </div>
+          <h3 class="subhead">Edges</h3>
+          ${edgeRows}
         `;
       }
 
@@ -997,6 +1054,9 @@
       });
       loadRemoteSources().catch((error) => {
         remoteSources.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+      });
+      loadLineageOverview().catch((error) => {
+        lineageOverview.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
       });
     </script>
   </body>

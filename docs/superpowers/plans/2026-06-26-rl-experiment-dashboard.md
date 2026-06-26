@@ -318,6 +318,18 @@
 - [x] **Step 3: Add an API payload and route returning lineage nodes plus edges for graph-oriented UI work.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 21: Bundled Lineage Overview Panel
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for a lineage overview panel using `/api/lineage`.**
+- [x] **Step 2: Add a bundled dashboard panel listing lineage edges and node counts.**
+- [x] **Step 3: Load lineage overview on page load and expose a refresh control.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
