@@ -815,6 +815,18 @@
 - [x] **Step 3: Render checkpoint metric snapshots in the bundled checkpoint table.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 55: Run Table Task Git And Date Filters
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for task, git, and start date filter controls.**
+- [x] **Step 2: Add dedicated task, git, and start date range controls to the run table filter bar.**
+- [x] **Step 3: Wire client-side filtering to task name, git commit/branch, and run start time.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
