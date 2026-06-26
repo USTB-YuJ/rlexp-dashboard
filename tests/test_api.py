@@ -204,6 +204,10 @@ class ApiPayloadTests(unittest.TestCase):
 
         self.assertEqual(payload["run"]["run_id"], "group/child")
         self.assertEqual(payload["checkpoints"][0]["iteration"], 20)
+        self.assertEqual(payload["checkpoints"][0]["metric_values"][0]["tag"], "Train/mean_reward")
+        self.assertEqual(payload["checkpoints"][0]["metric_values"][0]["value"], 2.5)
+        self.assertEqual(payload["checkpoints"][0]["metric_values"][0]["step"], 20)
+        self.assertEqual(payload["checkpoints"][0]["metric_values"][0]["step_delta"], 0)
         self.assertEqual(payload["metrics"][0]["tag"], "Train/mean_reward")
         self.assertEqual(payload["parent_lineage"][0]["parent_run_id"], "group/parent")
         self.assertEqual(payload["child_lineage"], [])
@@ -260,6 +264,52 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(terminations["body_height"]["time_out"], False)
         self.assertEqual(terminations["body_height"]["params"], {"min_height": 0.4})
         self.assertEqual(terminations["time_out"]["time_out"], True)
+
+    def test_run_detail_checkpoint_metric_snapshot_uses_project_preferred_metrics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            store = DashboardStore(tmp_path / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project("project", tmp_path / "cache", preferred_metrics=["Episode/length"])
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/run",
+                    name="run",
+                    group="group",
+                    path=tmp_path / "run",
+                    modified_time=1.0,
+                    checkpoints=[
+                        CheckpointRecord(
+                            path=tmp_path / "run" / "model_20.pt",
+                            iteration=20,
+                            size_bytes=128,
+                            modified_time=1.0,
+                            is_latest=True,
+                        )
+                    ],
+                    metric_series=[
+                        MetricSeries(
+                            tag="Train/mean_reward",
+                            points=[{"step": 20, "value": 1.0}],
+                            original_count=1,
+                        ),
+                        MetricSeries(
+                            tag="Episode/length",
+                            points=[{"step": 18, "value": 900.0}],
+                            original_count=1,
+                        ),
+                    ],
+                ),
+            )
+
+            payload = run_detail_payload(store, "group/run")
+
+        metric_values = payload["checkpoints"][0]["metric_values"]
+        self.assertEqual([metric["tag"] for metric in metric_values], ["Episode/length"])
+        self.assertEqual(metric_values[0]["value"], 900.0)
+        self.assertEqual(metric_values[0]["step"], 18)
+        self.assertEqual(metric_values[0]["step_delta"], 2.0)
 
     def test_run_detail_payload_includes_parent_comparison_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -733,8 +783,12 @@ class ApiPayloadTests(unittest.TestCase):
                 metric_series=[
                     MetricSeries(
                         tag="Train/mean_reward",
-                        points=[{"step": 0, "value": 2.0}],
-                        original_count=1,
+                        points=[
+                            {"step": 0, "value": 1.0},
+                            {"step": 20, "value": 2.5},
+                            {"step": 30, "value": 2.0},
+                        ],
+                        original_count=3,
                     )
                 ],
                 videos=[child_video],

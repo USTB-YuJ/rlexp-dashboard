@@ -801,6 +801,20 @@
 - [x] **Step 3: Expose the report through API, CLI, and run detail export link.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 54: Checkpoint Metric Snapshot
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for checkpoint-level nearest metric snapshots in run detail and dashboard UI hooks.**
+- [x] **Step 2: Compute each checkpoint's nearest sampled metric value from indexed metric series, preferring project metrics when configured.**
+- [x] **Step 3: Render checkpoint metric snapshots in the bundled checkpoint table.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

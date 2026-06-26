@@ -126,6 +126,8 @@ class StaticDashboardTests(unittest.TestCase):
         self.assertIn("parentComparePanel", html)
         self.assertIn("parent_compare", html)
         self.assertIn("Checkpoints", html)
+        self.assertIn("Metric Snapshot", html)
+        self.assertIn("checkpointMetricSnapshot", html)
         self.assertIn("Videos", html)
         self.assertIn("Artifacts", html)
         self.assertIn("artifactTable", html)

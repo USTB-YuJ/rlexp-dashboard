@@ -114,7 +114,7 @@ def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
     child_lineage = store.list_child_lineage(run_id)
     return {
         "run": run,
-        "checkpoints": store.list_checkpoints(run_id),
+        "checkpoints": _checkpoints_with_metric_values(store, run),
         "artifacts": store.list_run_artifacts(run_id),
         "config_files": store.list_run_config_files(run_id),
         "event_files": store.list_run_event_files(run_id),
@@ -200,6 +200,45 @@ def _run_config_summary(params: Dict[str, Any]) -> Dict[str, Any]:
         "rewards": _reward_summary(params),
         "terminations": _termination_summary(params),
     }
+
+
+def _checkpoints_with_metric_values(store: DashboardStore, run: Dict[str, Any]) -> list[Dict[str, Any]]:
+    checkpoints = [dict(checkpoint) for checkpoint in store.list_checkpoints(run["run_id"])]
+    if not checkpoints:
+        return checkpoints
+
+    project = store.get_project(run["project_name"]) or {}
+    preferred_tags = list(project.get("preferred_metrics") or [])
+    ordered_tags = preferred_tags or list(_DEFAULT_RUN_TABLE_METRICS)
+    metric_series = store.list_metric_series(run["run_id"])
+    series_by_tag = {series["tag"]: series for series in metric_series}
+    selected_series = [series_by_tag[tag] for tag in ordered_tags if tag in series_by_tag]
+    if not selected_series and metric_series:
+        selected_series = metric_series[:3]
+
+    for checkpoint in checkpoints:
+        checkpoint["metric_values"] = _nearest_metric_values(checkpoint.get("iteration"), selected_series)
+    return checkpoints
+
+
+def _nearest_metric_values(iteration: Any, metric_series: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    if iteration is None:
+        return []
+    values: list[Dict[str, Any]] = []
+    for series in metric_series:
+        points = [point for point in series.get("points", []) if point.get("step") is not None]
+        if not points:
+            continue
+        nearest = min(points, key=lambda point: abs(float(point["step"]) - float(iteration)))
+        values.append(
+            {
+                "tag": series["tag"],
+                "step": nearest.get("step"),
+                "value": nearest.get("value"),
+                "step_delta": abs(float(nearest.get("step", 0)) - float(iteration)),
+            }
+        )
+    return values
 
 
 def _reward_summary(params: Dict[str, Any]) -> list[Dict[str, Any]]:

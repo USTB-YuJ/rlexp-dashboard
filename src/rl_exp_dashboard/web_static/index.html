@@ -1792,7 +1792,7 @@
         if (checkpoints.length === 0) return `<div class="empty">No checkpoints indexed for this run.</div>`;
         return `
           <table>
-            <thead><tr><th>Checkpoint</th><th>Iteration</th><th>Latest</th></tr></thead>
+            <thead><tr><th>Checkpoint</th><th>Iteration</th><th>Metric Snapshot</th><th>Latest</th></tr></thead>
             <tbody>
               ${checkpoints
                 .map(
@@ -1800,6 +1800,7 @@
                     <tr>
                       <td>${escapeHtml(checkpoint.path.split('/').pop())}</td>
                       <td>${checkpoint.iteration ?? ''}</td>
+                      <td>${checkpointMetricSnapshot(checkpoint.metric_values || [])}</td>
                       <td>${checkpoint.is_latest ? 'yes' : ''}</td>
                     </tr>
                   `,
@@ -1808,6 +1809,17 @@
             </tbody>
           </table>
         `;
+      }
+
+      function checkpointMetricSnapshot(metricValues) {
+        if (!metricValues || metricValues.length === 0) return '';
+        return metricValues
+          .map((metric) => {
+            const stepDelta = Number(metric.step_delta || 0);
+            const deltaLabel = stepDelta > 0 ? `, d=${formatNumber(stepDelta)}` : '';
+            return `${escapeHtml(metric.tag)}=${formatNumber(metric.value)} @ ${escapeHtml(metric.step)}${deltaLabel}`;
+          })
+          .join('<br />');
       }
 
       function videoTable(runId, artifacts) {
