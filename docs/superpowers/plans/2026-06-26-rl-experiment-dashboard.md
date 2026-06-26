@@ -827,6 +827,59 @@
 - [x] **Step 3: Wire client-side filtering to task name, git commit/branch, and run start time.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 56: Child Branch Comparison
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for run-detail child branch comparison payload and dashboard hooks.**
+- [x] **Step 2: Add child branch comparison summaries for each direct child lineage edge.**
+- [x] **Step 3: Render child branch comparison table in run detail.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
+## Task 57: Report Child Branch Comparison
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/report.py`
+- Modify: `tests/test_api.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing report test for child branch comparison Markdown.**
+- [x] **Step 2: Render child branch comparison summary in exported run reports.**
+- [x] **Step 3: Run targeted and full verification.**
+
+## Task 58: Expanded Config Diff Groups
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for command, terrain, AMP, and estimator diff groups.**
+- [x] **Step 2: Add backend grouping rules for the expanded RL config domains.**
+- [x] **Step 3: Render expanded group titles in the bundled compare UI.**
+- [x] **Step 4: Run targeted and full verification.**
+
+## Task 59: Compare Human Verdicts
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for compare payload and UI human verdict comparison.**
+- [x] **Step 2: Add compare review summaries from run observations and checkpoint reviews.**
+- [x] **Step 3: Render human verdict comparison in the bundled compare UI.**
+- [x] **Step 4: Run targeted and full verification.**
+
 ## Later Milestones
 
 - React/Vite frontend.

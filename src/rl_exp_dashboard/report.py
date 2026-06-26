@@ -12,6 +12,7 @@ def render_run_report_markdown(payload: Dict[str, Any]) -> str:
     lines: list[str] = [f"# Experiment Report: {run['run_id']}", ""]
     lines.extend(_run_summary(run))
     lines.extend(_lineage_summary(payload))
+    lines.extend(_child_branch_summary(payload.get("child_branch_compare") or []))
     lines.extend(_observation_summary(payload.get("observation") or {}))
     lines.extend(_metric_summary(payload.get("metrics") or []))
     lines.extend(_checkpoint_reviews(payload.get("checkpoint_reviews") or []))
@@ -56,6 +57,46 @@ def _lineage_summary(payload: Dict[str, Any]) -> list[str]:
         lines.append(f"- Result summary: {_text(result_summary)}")
     lines.append("")
     return lines
+
+
+def _child_branch_summary(branches: list[Dict[str, Any]]) -> list[str]:
+    lines = ["## Child Branch Comparison", ""]
+    if not branches:
+        return [*lines, "No child branches recorded.", ""]
+    lines.extend(
+        [
+            "| Child | Type | Change | Review | Config Diffs | Metric Deltas | Result |",
+            "| --- | --- | --- | --- | ---: | --- | --- |",
+        ]
+    )
+    for branch in branches:
+        lines.append(
+            "| {child} | {relationship} | {change} | {review} | {diffs} | {deltas} | {result} |".format(
+                child=_cell(branch.get("child_run_id")),
+                relationship=_cell(branch.get("relationship")),
+                change=_cell(branch.get("intended_change")),
+                review=_cell(_branch_review(branch)),
+                diffs=_cell(branch.get("config_diff_count")),
+                deltas=_cell(_branch_metric_deltas(branch.get("metric_deltas") or [])),
+                result=_cell(branch.get("result_summary")),
+            )
+        )
+    lines.append("")
+    return lines
+
+
+def _branch_review(branch: Dict[str, Any]) -> str:
+    verdict = branch.get("review_verdict") or "unreviewed"
+    summary = branch.get("review_summary") or ""
+    return f"{verdict}: {summary}" if summary else str(verdict)
+
+
+def _branch_metric_deltas(deltas: list[Dict[str, Any]]) -> str:
+    return ", ".join(
+        f"{delta.get('tag')}: {_text(delta.get('delta_last_value'))}"
+        for delta in deltas
+        if delta.get("tag")
+    )
 
 
 def _observation_summary(observation: Dict[str, Any]) -> list[str]:

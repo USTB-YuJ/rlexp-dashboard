@@ -483,9 +483,13 @@
       const timelineOverview = document.getElementById('timeline-overview');
       const defaultConfigDiffGroups = [
         { key: 'rewards', title: 'Reward Diffs' },
-        { key: 'algorithm', title: 'Algorithm Diffs' },
-        { key: 'observation_network', title: 'Observation / Network Diffs' },
+        { key: 'commands', title: 'Command Diffs' },
+        { key: 'terrain', title: 'Terrain Diffs' },
         { key: 'curriculum_termination', title: 'Curriculum / Termination Diffs' },
+        { key: 'observation_network', title: 'Observation / Network Diffs' },
+        { key: 'amp', title: 'AMP Diffs' },
+        { key: 'estimator', title: 'Estimator Diffs' },
+        { key: 'algorithm', title: 'Algorithm Diffs' },
       ];
       let indexedRuns = [];
       document.getElementById('refresh-runs').addEventListener('click', loadRuns);
@@ -1480,6 +1484,9 @@
           <h3 class="subhead">Parent Comparison</h3>
           ${parentComparePanel(payload.parent_compare)}
 
+          <h3 class="subhead">Child Branch Comparison</h3>
+          ${childBranchComparePanel(payload.child_branch_compare || [])}
+
           <h3 class="subhead">Manual Observation</h3>
           ${observationPanel(run.run_id, payload.observation)}
 
@@ -1526,6 +1533,54 @@
         `;
       }
 
+      function childBranchComparePanel(branches) {
+        if (!branches || branches.length === 0) return `<div class="empty">No child branches recorded for this run.</div>`;
+        return `
+          <table>
+            <thead>
+              <tr>
+                <th>Child</th>
+                <th>Type</th>
+                <th>Change</th>
+                <th>Review</th>
+                <th>Config Diffs</th>
+                <th>Metric Deltas</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${branches
+                .map(
+                  (branch) => `
+                    <tr>
+                      <td>${escapeHtml(branch.child_run_id || '')}</td>
+                      <td>${escapeHtml(branch.relationship || '')}</td>
+                      <td>${escapeHtml(branch.intended_change || '')}</td>
+                      <td>${escapeHtml(branchReview(branch))}</td>
+                      <td>${formatNumber(branch.config_diff_count)}</td>
+                      <td>${branchMetricDeltas(branch.metric_deltas || [])}</td>
+                      <td>${escapeHtml(branch.result_summary || '')}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function branchReview(branch) {
+        const verdict = branch.review_verdict || 'unreviewed';
+        return branch.review_summary ? `${verdict}: ${branch.review_summary}` : verdict;
+      }
+
+      function branchMetricDeltas(deltas) {
+        if (!deltas || deltas.length === 0) return '';
+        return deltas
+          .map((delta) => `${escapeHtml(delta.tag)}: ${formatNumber(delta.delta_last_value)}`)
+          .join('<br />');
+      }
+
       async function loadCompareResult() {
         const beforeRunId = compareBeforeRun.value;
         const afterRunId = compareAfterRun.value;
@@ -1547,6 +1602,8 @@
           ${configDiffGroups(payload.config_diff_groups || [])}
           <h3 class="subhead">Config Diffs</h3>
           ${configDiffTable(payload.config_diffs || [])}
+          <h3 class="subhead">Human Verdict Comparison</h3>
+          ${reviewComparePanel(payload.review_compare)}
           <h3 class="subhead">Metric Deltas</h3>
           ${metricDeltaTable(payload.metric_deltas || [])}
         `;
@@ -1608,6 +1665,54 @@
             </tbody>
           </table>
         `;
+      }
+
+      function reviewComparePanel(reviewCompare) {
+        if (!reviewCompare) return `<div class="empty">No human verdict comparison available.</div>`;
+        const rows = [
+          ['Baseline', reviewCompare.before || {}],
+          ['Target', reviewCompare.after || {}],
+        ];
+        return `
+          <table>
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th>Verdict</th>
+                <th>Summary</th>
+                <th>Tags</th>
+                <th>Recommended</th>
+                <th>Checkpoint Reviews</th>
+                <th>Best Review</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows
+                .map(
+                  ([label, review]) => `
+                    <tr>
+                      <td>${escapeHtml(label)}</td>
+                      <td>${escapeHtml(review.verdict || 'unreviewed')}</td>
+                      <td>${escapeHtml(review.summary || '')}</td>
+                      <td>${escapeHtml(joinList(review.tags || []))}</td>
+                      <td>${escapeHtml(review.recommended_checkpoint || review.recommended_review_checkpoint || '')}</td>
+                      <td>${formatNumber(review.checkpoint_review_count)}</td>
+                      <td>${checkpointReviewSummary(review)}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function checkpointReviewSummary(review) {
+        const checkpoint = review.best_review_checkpoint || review.recommended_review_checkpoint || '';
+        const status = review.best_review_status || review.recommended_review_status || '';
+        const score = review.best_review_score ?? review.recommended_review_score;
+        if (!checkpoint && !status && score === undefined) return '';
+        return `${escapeHtml(checkpoint)} ${escapeHtml(status)} ${formatNumber(score)}`.trim();
       }
 
       function field(label, value) {

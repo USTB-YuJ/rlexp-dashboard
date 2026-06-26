@@ -330,6 +330,63 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(groups["algorithm"]["diffs"][0]["after"], 0.005)
         self.assertEqual(deltas["Train/mean_reward"]["delta_last_value"], 1.0)
 
+    def test_run_detail_payload_includes_child_branch_comparison_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            store = self._store_with_parent_and_child(tmp_path)
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/child-b",
+                    name="child-b",
+                    group="group",
+                    path=tmp_path / "child-b",
+                    modified_time=4.0,
+                    params={"agent": {"algorithm": {"entropy_coef": 0.02}}},
+                    metric_summaries=[
+                        MetricSummary(
+                            tag="Train/mean_reward",
+                            first_step=0,
+                            last_step=10,
+                            first_value=0.5,
+                            last_value=0.5,
+                            min_value=0.5,
+                            max_value=0.5,
+                            count=1,
+                        )
+                    ],
+                ),
+            )
+            store.upsert_lineage(
+                LineageEdge(
+                    parent_run_id="group/parent",
+                    child_run_id="group/child-b",
+                    relationship="ablation",
+                    intended_change="higher entropy",
+                    result_summary="reward regressed",
+                )
+            )
+            store.upsert_run_observation(
+                run_id="group/child-b",
+                verdict="bad",
+                summary="Unstable gait.",
+                tags=["falling"],
+            )
+
+            payload = run_detail_payload(store, "group/parent")
+
+        branches = {entry["child_run_id"]: entry for entry in payload["child_branch_compare"]}
+        self.assertEqual(set(branches), {"group/child", "group/child-b"})
+        self.assertEqual(branches["group/child"]["relationship"], "finetune")
+        self.assertEqual(branches["group/child"]["config_diff_count"], 1)
+        self.assertEqual(branches["group/child"]["metric_deltas"][0]["delta_last_value"], 1.0)
+        self.assertEqual(branches["group/child-b"]["relationship"], "ablation")
+        self.assertEqual(branches["group/child-b"]["intended_change"], "higher entropy")
+        self.assertEqual(branches["group/child-b"]["result_summary"], "reward regressed")
+        self.assertEqual(branches["group/child-b"]["review_verdict"], "bad")
+        self.assertEqual(branches["group/child-b"]["review_summary"], "Unstable gait.")
+        self.assertEqual(branches["group/child-b"]["metric_deltas"][0]["delta_last_value"], -0.5)
+
     def test_run_report_markdown_summarizes_lineage_metrics_and_reviews(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))
@@ -363,6 +420,56 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertIn("- Tags: bad-stairs, good-flat", markdown)
         self.assertIn("| model_20.pt | mixed | 0.72 | yes | candidate |", markdown)
         self.assertIn("Stable forward walking, occasional stair stumble.", markdown)
+
+    def test_run_report_markdown_summarizes_child_branch_comparisons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            store = self._store_with_parent_and_child(tmp_path)
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/child-b",
+                    name="child-b",
+                    group="group",
+                    path=tmp_path / "child-b",
+                    modified_time=4.0,
+                    params={"agent": {"algorithm": {"entropy_coef": 0.02}}},
+                    metric_summaries=[
+                        MetricSummary(
+                            tag="Train/mean_reward",
+                            first_step=0,
+                            last_step=10,
+                            first_value=0.5,
+                            last_value=0.5,
+                            min_value=0.5,
+                            max_value=0.5,
+                            count=1,
+                        )
+                    ],
+                ),
+            )
+            store.upsert_lineage(
+                LineageEdge(
+                    parent_run_id="group/parent",
+                    child_run_id="group/child-b",
+                    relationship="ablation",
+                    intended_change="higher entropy",
+                    result_summary="reward regressed",
+                )
+            )
+            store.upsert_run_observation(
+                run_id="group/child-b",
+                verdict="bad",
+                summary="Unstable gait.",
+                tags=["falling"],
+            )
+
+            markdown = run_report_markdown(store, "group/parent")
+
+        self.assertIn("## Child Branch Comparison", markdown)
+        self.assertIn("| group/child | finetune | lower entropy | unreviewed | 1 | Train/mean_reward: 1.0 |", markdown)
+        self.assertIn("| group/child-b | ablation | higher entropy | bad: Unstable gait. | 1 | Train/mean_reward: -0.5 |", markdown)
+        self.assertIn("reward regressed", markdown)
 
     def test_artifact_file_path_only_allows_indexed_run_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -429,8 +536,12 @@ class ApiPayloadTests(unittest.TestCase):
                     params={
                         "rewards": {"action_rate_l2": {"weight": -0.0001}},
                         "agent": {"algorithm": {"entropy_coef": 0.01}},
+                        "commands": {"base_velocity": {"heading_kp": 1.0}},
+                        "terrain": {"generator": {"curriculum": False}},
                         "observations": {"actor": {"depth": True}},
                         "curriculum": {"terrain_levels": {"enabled": False}},
+                        "amp": {"motion_file": "walk1.npz"},
+                        "estimator": {"contact_loss_coef": 1.0},
                     },
                 ),
             )
@@ -445,8 +556,12 @@ class ApiPayloadTests(unittest.TestCase):
                     params={
                         "rewards": {"action_rate_l2": {"weight": -0.001}},
                         "agent": {"algorithm": {"entropy_coef": 0.005}},
+                        "commands": {"base_velocity": {"heading_kp": 0.5}},
+                        "terrain": {"generator": {"curriculum": True}},
                         "observations": {"actor": {"depth": False}},
                         "curriculum": {"terrain_levels": {"enabled": True}},
+                        "amp": {"motion_file": "walk_best.npz"},
+                        "estimator": {"contact_loss_coef": 0.5},
                     },
                 ),
             )
@@ -455,17 +570,47 @@ class ApiPayloadTests(unittest.TestCase):
 
         groups = {group["key"]: group for group in payload["config_diff_groups"]}
         self.assertEqual(groups["rewards"]["title"], "Reward Diffs")
+        self.assertEqual(groups["commands"]["title"], "Command Diffs")
+        self.assertEqual(groups["terrain"]["title"], "Terrain Diffs")
         self.assertEqual(groups["algorithm"]["title"], "Algorithm Diffs")
+        self.assertEqual(groups["amp"]["title"], "AMP Diffs")
+        self.assertEqual(groups["estimator"]["title"], "Estimator Diffs")
         self.assertEqual(groups["observation_network"]["title"], "Observation / Network Diffs")
         self.assertEqual(groups["curriculum_termination"]["title"], "Curriculum / Termination Diffs")
         self.assertEqual(groups["rewards"]["diffs"][0]["path"], "rewards.action_rate_l2.weight")
+        self.assertEqual(groups["commands"]["diffs"][0]["path"], "commands.base_velocity.heading_kp")
+        self.assertEqual(groups["terrain"]["diffs"][0]["path"], "terrain.generator.curriculum")
         self.assertEqual(groups["algorithm"]["diffs"][0]["path"], "agent.algorithm.entropy_coef")
+        self.assertEqual(groups["amp"]["diffs"][0]["path"], "amp.motion_file")
+        self.assertEqual(groups["estimator"]["diffs"][0]["path"], "estimator.contact_loss_coef")
         self.assertEqual(groups["observation_network"]["diffs"][0]["path"], "observations.actor.depth")
         self.assertEqual(groups["curriculum_termination"]["diffs"][0]["path"], "curriculum.terrain_levels.enabled")
 
     def test_compare_runs_payload_returns_config_diff_and_metric_delta(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))
+            store.upsert_run_observation(
+                run_id="group/parent",
+                verdict="bad",
+                summary="Baseline falls on stairs.",
+                tags=["falling"],
+            )
+            store.upsert_run_observation(
+                run_id="group/child",
+                verdict="mixed",
+                summary="Better rough walking, still weak on stairs.",
+                tags=["good-rough", "bad-stairs"],
+                recommended_checkpoint="model_20.pt",
+            )
+            store.upsert_checkpoint_review(
+                run_id="group/child",
+                checkpoint="model_20.pt",
+                status="mixed",
+                notes="Candidate for more stair training.",
+                tags=["candidate"],
+                score=0.72,
+                recommended=True,
+            )
 
             payload = compare_runs_payload(store, "group/parent", "group/child")
             diffs_by_path = {item["path"]: item for item in payload["config_diffs"]}
@@ -479,6 +624,17 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["before_last_value"], 1.0)
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["after_last_value"], 2.0)
         self.assertEqual(deltas_by_tag["Train/mean_reward"]["delta_last_value"], 1.0)
+        self.assertEqual(payload["review_compare"]["before"]["verdict"], "bad")
+        self.assertEqual(payload["review_compare"]["before"]["summary"], "Baseline falls on stairs.")
+        self.assertEqual(payload["review_compare"]["before"]["tags"], ["falling"])
+        self.assertEqual(payload["review_compare"]["before"]["checkpoint_review_count"], 0)
+        self.assertEqual(payload["review_compare"]["after"]["verdict"], "mixed")
+        self.assertEqual(payload["review_compare"]["after"]["summary"], "Better rough walking, still weak on stairs.")
+        self.assertEqual(payload["review_compare"]["after"]["tags"], ["bad-stairs", "good-rough"])
+        self.assertEqual(payload["review_compare"]["after"]["recommended_checkpoint"], "model_20.pt")
+        self.assertEqual(payload["review_compare"]["after"]["checkpoint_review_count"], 1)
+        self.assertEqual(payload["review_compare"]["after"]["recommended_review_checkpoint"], "model_20.pt")
+        self.assertEqual(payload["review_compare"]["after"]["best_review_score"], 0.72)
 
     def test_lineage_overview_payload_returns_nodes_and_edges(self):
         with tempfile.TemporaryDirectory() as tmp:

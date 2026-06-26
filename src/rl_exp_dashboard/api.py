@@ -19,9 +19,13 @@ _DEFAULT_RUN_TABLE_METRICS = (
 
 _CONFIG_DIFF_GROUPS = (
     ("rewards", "Reward Diffs"),
-    ("algorithm", "Algorithm Diffs"),
-    ("observation_network", "Observation / Network Diffs"),
+    ("commands", "Command Diffs"),
+    ("terrain", "Terrain Diffs"),
     ("curriculum_termination", "Curriculum / Termination Diffs"),
+    ("observation_network", "Observation / Network Diffs"),
+    ("amp", "AMP Diffs"),
+    ("estimator", "Estimator Diffs"),
+    ("algorithm", "Algorithm Diffs"),
 )
 
 
@@ -109,6 +113,7 @@ def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
             "parent_lineage": [],
             "child_lineage": [],
             "parent_compare": None,
+            "child_branch_compare": [],
         }
     parent_lineage = store.list_lineage(run_id)
     child_lineage = store.list_child_lineage(run_id)
@@ -122,6 +127,7 @@ def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
         "parent_lineage": parent_lineage,
         "child_lineage": child_lineage,
         "parent_compare": _parent_compare_summary(store, run, parent_lineage),
+        "child_branch_compare": _child_branch_compare(store, run, child_lineage),
         "config_summary": _run_config_summary(run.get("params", {})),
         "observation": store.get_run_observation(run_id),
         "checkpoint_reviews": store.list_checkpoint_reviews(run_id),
@@ -161,6 +167,10 @@ def compare_runs_payload(store: DashboardStore, before_run_id: str, after_run_id
             store.list_metric_summaries(before_run_id),
             store.list_metric_summaries(after_run_id),
         ),
+        "review_compare": {
+            "before": _run_review_compare_summary(store, before_run_id),
+            "after": _run_review_compare_summary(store, after_run_id),
+        },
     }
 
 
@@ -177,8 +187,30 @@ def _config_diff_group_key(path: str) -> str | None:
     normalized = path.lower()
     if normalized.startswith(("rewards.", "reward.")) or ".rewards." in normalized:
         return "rewards"
+    if normalized.startswith(("commands.", "command.")) or ".commands." in normalized:
+        return "commands"
+    if "velocity_command" in normalized or "command_manager" in normalized:
+        return "commands"
+    if normalized.startswith(("curriculum.", "curriculums.", "termination.", "terminations.")):
+        return "curriculum_termination"
+    if ".curriculum." in normalized or ".termination." in normalized or ".terminations." in normalized:
+        return "curriculum_termination"
+    if normalized.startswith(("terrain.", "terrains.")) or ".terrain." in normalized or ".terrains." in normalized:
+        return "terrain"
+    if "terrain_generator" in normalized or "terrain_type" in normalized:
+        return "terrain"
     if normalized.startswith(("algorithm.", "agent.algorithm.")) or ".algorithm." in normalized:
         return "algorithm"
+    if normalized.startswith(("amp.", "motion.", "motions.")) or ".amp." in normalized:
+        return "amp"
+    if "motion_file" in normalized or "motion_path" in normalized or "motion_data" in normalized:
+        return "amp"
+    if normalized.startswith(("estimator.", "estimators.", "auxiliary.", "auxiliary_losses.")):
+        return "estimator"
+    if ".estimator." in normalized or ".estimators." in normalized:
+        return "estimator"
+    if "contact_loss" in normalized or "auxiliary_loss" in normalized:
+        return "estimator"
     if normalized.startswith(("observations.", "observation.", "actor.", "critic.", "policy.")):
         return "observation_network"
     if (
@@ -188,11 +220,22 @@ def _config_diff_group_key(path: str) -> str | None:
         or "depth_encoder" in normalized
     ):
         return "observation_network"
-    if normalized.startswith(("curriculum.", "curriculums.", "termination.", "terminations.")):
-        return "curriculum_termination"
-    if ".curriculum." in normalized or ".termination." in normalized or ".terminations." in normalized:
-        return "curriculum_termination"
     return None
+
+
+def _run_review_compare_summary(store: DashboardStore, run_id: str) -> Dict[str, Any]:
+    observation = store.get_run_observation(run_id) or {}
+    checkpoint_reviews = store.list_checkpoint_reviews(run_id)
+    checkpoint_summary = _checkpoint_review_summary(checkpoint_reviews)
+    return {
+        "run_id": run_id,
+        "verdict": observation.get("verdict", "unreviewed"),
+        "summary": observation.get("summary", ""),
+        "tags": _unique_tags(observation.get("tags", [])),
+        "recommended_checkpoint": observation.get("recommended_checkpoint"),
+        "checkpoint_review_count": len(checkpoint_reviews),
+        **checkpoint_summary,
+    }
 
 
 def _run_config_summary(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -336,6 +379,43 @@ def _parent_compare_summary(
         "config_diffs": comparison["config_diffs"],
         "metric_deltas": comparison["metric_deltas"],
     }
+
+
+def _child_branch_compare(
+    store: DashboardStore,
+    parent_run: Dict[str, Any],
+    child_lineage: list[Dict[str, Any]],
+) -> list[Dict[str, Any]]:
+    project = store.get_project(parent_run["project_name"]) or {}
+    preferred_metrics = project.get("preferred_metrics", []) if project else []
+    branches = []
+    for edge in child_lineage:
+        child = store.get_run(edge["child_run_id"])
+        if child is None:
+            continue
+        comparison = compare_runs_payload(store, parent_run["run_id"], child["run_id"])
+        observation = store.get_run_observation(child["run_id"]) or {}
+        branches.append(
+            {
+                "child_run_id": child["run_id"],
+                "child_name": child.get("name", ""),
+                "relationship": edge.get("relationship", ""),
+                "parent_checkpoint": edge.get("parent_checkpoint"),
+                "intended_change": edge.get("intended_change", ""),
+                "result_summary": edge.get("result_summary", ""),
+                "review_verdict": observation.get("verdict", "unreviewed"),
+                "review_summary": observation.get("summary", ""),
+                "tags": observation.get("tags", []),
+                "recommended_checkpoint": observation.get("recommended_checkpoint"),
+                "config_diff_count": len(comparison["config_diffs"]),
+                "metric_deltas": comparison["metric_deltas"],
+                "key_metrics": _run_table_metrics(
+                    store.list_metric_summaries(child["run_id"]),
+                    preferred_metrics,
+                ),
+            }
+        )
+    return branches
 
 
 def remote_sources_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
