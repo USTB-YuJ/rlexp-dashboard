@@ -121,6 +121,32 @@ class LocalRunIndexerTests(unittest.TestCase):
         self.assertEqual(runs[0].metric_series[0].tag, "Train/mean_reward")
         self.assertEqual(runs[0].metric_series[0].points[-1]["value"], 2.0)
 
+    def test_discover_runs_infers_parent_from_resume_params(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            parent = root / "group" / "baseline"
+            child = root / "group" / "child"
+            (parent / "params").mkdir(parents=True)
+            (child / "params").mkdir(parents=True)
+            (parent / "params" / "agent.yaml").write_text("agent:\n  seed: 1\n", encoding="utf-8")
+            (child / "params" / "agent.yaml").write_text(
+                "\n".join(
+                    [
+                        "agent:",
+                        "  runner:",
+                        "    resume: true",
+                        "    load_run: baseline",
+                        "    load_checkpoint: model_100.pt",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            runs = {run.run_id: run for run in LocalRunIndexer(root).discover_runs()}
+
+        self.assertEqual(runs["group/child"].parent_run_id, "group/baseline")
+        self.assertEqual(runs["group/child"].parent_checkpoint, "model_100.pt")
+
 
 if __name__ == "__main__":
     unittest.main()

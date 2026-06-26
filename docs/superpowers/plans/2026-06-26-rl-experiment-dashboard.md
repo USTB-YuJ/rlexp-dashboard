@@ -227,6 +227,19 @@
 - [x] **Step 4: Render Videos and Artifacts sections in the bundled dashboard.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 14: Params-Based Lineage Inference
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/indexer.py`
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `tests/test_indexer.py`
+- Modify: `tests/test_cli.py`
+
+- [x] **Step 1: Write failing tests for inferring parent run/checkpoint from explicit resume/load-run params and persisting lineage during `index`.**
+- [x] **Step 2: Implement conservative parent inference from nested `load_run` and `load_checkpoint`-style params.**
+- [x] **Step 3: Persist inferred lineage edges during CLI indexing.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

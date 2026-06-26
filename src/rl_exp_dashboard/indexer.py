@@ -13,6 +13,8 @@ _CHECKPOINT_RE = re.compile(r"model_(\d+)\.pt$")
 _VIDEO_SUFFIXES = {".mp4", ".mov", ".webm", ".avi", ".mkv"}
 _ARTIFACT_SUFFIXES = {".onnx", ".jit", ".pt2"}
 _PARAM_SUFFIXES = {".yaml", ".yml", ".json"}
+_PARENT_RUN_KEYS = {"load_run", "resume_run", "parent_run", "parent_run_id"}
+_PARENT_CHECKPOINT_KEYS = {"load_checkpoint", "resume_checkpoint", "parent_checkpoint"}
 
 
 class LocalRunIndexer:
@@ -57,6 +59,7 @@ class LocalRunIndexer:
         metric_series = self.metric_series_reader(event_files) if event_files else []
         videos = self._find_files_by_suffix(run_dir, _VIDEO_SUFFIXES)
         artifacts = self._find_files_by_suffix(run_dir, _ARTIFACT_SUFFIXES)
+        parent_run_id, parent_checkpoint = _infer_parent(params, group)
 
         return RunRecord(
             run_id=run_id,
@@ -72,6 +75,8 @@ class LocalRunIndexer:
             metric_series=metric_series,
             videos=videos,
             artifacts=artifacts,
+            parent_run_id=parent_run_id,
+            parent_checkpoint=parent_checkpoint,
         )
 
     def _find_param_files(self, run_dir: Path) -> List[Path]:
@@ -133,3 +138,45 @@ class LocalRunIndexer:
 def _checkpoint_sort_key(path: Path) -> int:
     match = _CHECKPOINT_RE.match(path.name)
     return int(match.group(1)) if match else -1
+
+
+def _infer_parent(params: Dict[str, Any], group: str) -> tuple[str | None, str | None]:
+    parent_run = _find_nested_value(params, _PARENT_RUN_KEYS)
+    parent_checkpoint = _find_nested_value(params, _PARENT_CHECKPOINT_KEYS)
+    if not parent_run:
+        return None, _normalize_optional_string(parent_checkpoint)
+
+    parent_run_text = str(parent_run).strip()
+    if not parent_run_text or parent_run_text.lower() in {"none", "null", "false"}:
+        return None, _normalize_optional_string(parent_checkpoint)
+    if "/" not in parent_run_text:
+        parent_run_text = f"{group}/{parent_run_text}"
+    return parent_run_text, _normalize_optional_string(parent_checkpoint)
+
+
+def _find_nested_value(value: Any, keys: set[str]) -> Any:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if str(key).lower() in keys:
+                normalized = _normalize_optional_string(child)
+                if normalized is not None:
+                    return normalized
+        for child in value.values():
+            found = _find_nested_value(child, keys)
+            if found is not None:
+                return found
+    elif isinstance(value, list):
+        for child in value:
+            found = _find_nested_value(child, keys)
+            if found is not None:
+                return found
+    return None
+
+
+def _normalize_optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() in {"none", "null"}:
+        return None
+    return text

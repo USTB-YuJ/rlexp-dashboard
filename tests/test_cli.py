@@ -90,6 +90,44 @@ class CliTests(unittest.TestCase):
         self.assertEqual(metrics[0]["tag"], "Train/mean_reward")
         self.assertEqual(metrics[0]["last_value"], 3.0)
 
+    def test_index_command_persists_inferred_lineage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            log_root = tmp_path / "logs" / "rsl_rl"
+            parent = log_root / "group" / "baseline"
+            child = log_root / "group" / "child"
+            (parent / "params").mkdir(parents=True)
+            (child / "params").mkdir(parents=True)
+            (parent / "params" / "agent.yaml").write_text("agent:\n  seed: 1\n", encoding="utf-8")
+            (child / "params" / "agent.yaml").write_text(
+                "agent:\n  runner:\n    resume: true\n    load_run: baseline\n    load_checkpoint: model_100.pt\n",
+                encoding="utf-8",
+            )
+            db_path = tmp_path / "dashboard.sqlite3"
+
+            with redirect_stdout(StringIO()):
+                exit_code = main(
+                    [
+                        "index",
+                        "--project",
+                        "unitree_rl_mjlab",
+                        "--log-root",
+                        str(log_root),
+                        "--db",
+                        str(db_path),
+                    ]
+                )
+
+            store = DashboardStore(db_path)
+            lineage = store.list_lineage("group/child")
+            child_run = store.get_run("group/child")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(child_run["parent_run_id"], "group/baseline")
+        self.assertEqual(lineage[0]["parent_run_id"], "group/baseline")
+        self.assertEqual(lineage[0]["parent_checkpoint"], "model_100.pt")
+        self.assertEqual(lineage[0]["relationship"], "resume")
+
     def test_sync_dry_run_records_remote_source_and_prints_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
