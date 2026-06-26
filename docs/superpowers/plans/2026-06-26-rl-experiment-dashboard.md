@@ -768,6 +768,22 @@
 - [x] **Step 3: Wire `--include-checkpoints` through CLI, API payloads, and the bundled remote sync form.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 52: Run Detail TensorBoard Event File Sources
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for event file source persistence, API payload, and dashboard panel.**
+- [x] **Step 2: Persist `RunRecord.event_files` as TensorBoard event source metadata.**
+- [x] **Step 3: Expose event files in run detail payload and render a TensorBoard Event Files panel near metric charts.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

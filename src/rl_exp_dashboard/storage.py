@@ -101,6 +101,17 @@ class DashboardStore:
                     primary key (run_id, path)
                 );
 
+                create table if not exists run_event_files (
+                    run_id text not null references runs(run_id),
+                    path text not null,
+                    relative_path text not null,
+                    name text not null,
+                    suffix text not null,
+                    size_bytes integer not null,
+                    modified_time real not null,
+                    primary key (run_id, path)
+                );
+
                 create table if not exists metric_summaries (
                     run_id text not null references runs(run_id),
                     tag text not null,
@@ -447,6 +458,27 @@ class DashboardStore:
                     for config_file in _run_config_files(run)
                 ],
             )
+            conn.execute("delete from run_event_files where run_id = ?", (run.run_id,))
+            conn.executemany(
+                """
+                insert into run_event_files (
+                    run_id, path, relative_path, name, suffix, size_bytes, modified_time
+                )
+                values (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        run.run_id,
+                        event_file["path"],
+                        event_file["relative_path"],
+                        event_file["name"],
+                        event_file["suffix"],
+                        event_file["size_bytes"],
+                        event_file["modified_time"],
+                    )
+                    for event_file in _run_event_files(run)
+                ],
+            )
             conn.execute("delete from metric_summaries where run_id = ?", (run.run_id,))
             conn.executemany(
                 """
@@ -596,6 +628,25 @@ class DashboardStore:
         with self._connect() as conn:
             rows = conn.execute(
                 "select * from run_config_files where run_id = ? order by relative_path",
+                (run_id,),
+            ).fetchall()
+        return [
+            {
+                "run_id": row["run_id"],
+                "path": row["path"],
+                "relative_path": row["relative_path"],
+                "name": row["name"],
+                "suffix": row["suffix"],
+                "size_bytes": row["size_bytes"],
+                "modified_time": row["modified_time"],
+            }
+            for row in rows
+        ]
+
+    def list_run_event_files(self, run_id: str) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "select * from run_event_files where run_id = ? order by relative_path",
                 (run_id,),
             ).fetchall()
         return [
@@ -870,12 +921,20 @@ def _run_config_files(run: RunRecord) -> List[Dict[str, Any]]:
     return [_config_file_record(Path(path), Path(run.path)) for path in sorted(run.param_files)]
 
 
+def _run_event_files(run: RunRecord) -> List[Dict[str, Any]]:
+    return [_source_file_record(Path(path), Path(run.path), "event") for path in sorted(run.event_files)]
+
+
 def _config_file_record(path: Path, run_path: Path) -> Dict[str, Any]:
+    return _source_file_record(path, run_path, "config")
+
+
+def _source_file_record(path: Path, run_path: Path, kind: str) -> Dict[str, Any]:
     try:
         relative_path = path.relative_to(run_path).as_posix()
     except ValueError:
         relative_path = path.name
-    record = _artifact_record(path, "config")
+    record = _artifact_record(path, kind)
     record["relative_path"] = relative_path
     return record
 

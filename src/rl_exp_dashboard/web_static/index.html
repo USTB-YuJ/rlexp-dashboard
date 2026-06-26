@@ -1426,6 +1426,9 @@
           <h3 class="subhead">Metric Trend</h3>
           ${metricTrend(payload.metric_series || [])}
 
+          <h3 class="subhead">TensorBoard Event Files</h3>
+          ${eventFilesTable(payload.event_files || [])}
+
           <h3 class="subhead">Checkpoints</h3>
           ${checkpointTable(payload.checkpoints || [])}
 
@@ -1626,6 +1629,29 @@
                       <td>${formatBytes(configFile.size_bytes)}</td>
                       <td>${formatTimestamp(configFile.modified_time)}</td>
                       <td>${escapeHtml(configFile.path || '')}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function eventFilesTable(eventFiles) {
+        if (!eventFiles || eventFiles.length === 0) return `<div class="empty">No TensorBoard event files indexed for this run.</div>`;
+        return `
+          <table>
+            <thead><tr><th>File</th><th>Size</th><th>Modified</th><th>Path</th></tr></thead>
+            <tbody>
+              ${eventFiles
+                .map(
+                  (eventFile) => `
+                    <tr>
+                      <td>${escapeHtml(eventFile.relative_path || eventFile.name || '')}</td>
+                      <td>${formatBytes(eventFile.size_bytes)}</td>
+                      <td>${formatTimestamp(eventFile.modified_time)}</td>
+                      <td>${escapeHtml(eventFile.path || '')}</td>
                     </tr>
                   `,
                 )
