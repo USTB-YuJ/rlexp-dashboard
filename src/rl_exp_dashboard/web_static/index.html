@@ -231,7 +231,7 @@
         <div class="table-controls">
           <label>
             <div class="label">Search</div>
-            <input id="run-search" placeholder="Run, project, checkpoint" />
+            <input id="run-search" placeholder="Run, project, checkpoint, verdict" />
           </label>
           <label>
             <div class="label">Project</div>
@@ -256,13 +256,17 @@
             <tr>
               <th>Run</th>
               <th>Project</th>
+              <th>Reward</th>
+              <th>Review</th>
+              <th>Lineage</th>
+              <th>Media</th>
               <th>Latest Checkpoint</th>
               <th>Modified</th>
             </tr>
           </thead>
           <tbody id="run-table-body">
             <tr>
-              <td colspan="4" class="empty">Loading runs...</td>
+              <td colspan="8" class="empty">Loading runs...</td>
             </tr>
           </tbody>
         </table>
@@ -358,7 +362,7 @@
       runSort.addEventListener('change', renderFilteredRuns);
 
       async function loadRuns() {
-        runTableBody.innerHTML = `<tr><td colspan="4" class="empty">Loading runs...</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="8" class="empty">Loading runs...</td></tr>`;
         const response = await fetch('/api/runs');
         const payload = await response.json();
         renderRuns(payload.runs || []);
@@ -592,7 +596,18 @@
         const project = projectFilter.value;
         const group = groupFilter.value;
         let runs = indexedRuns.filter((run) => {
-          const searchable = [run.run_id, run.project_name, run.group, run.latest_checkpoint].join(' ').toLowerCase();
+          const searchable = [
+            run.run_id,
+            run.project_name,
+            run.group,
+            run.latest_checkpoint,
+            run.review_verdict,
+            run.recommended_checkpoint,
+            formatRunLineage(run),
+            formatRunMedia(run),
+          ]
+            .join(' ')
+            .toLowerCase();
           return (
             (!search || searchable.includes(search)) &&
             (!project || run.project_name === project) &&
@@ -601,7 +616,7 @@
         });
         runs = sortRuns(runs, runSort.value);
         if (runs.length === 0) {
-          runTableBody.innerHTML = `<tr><td colspan="4" class="empty">No runs match the current filters.</td></tr>`;
+          runTableBody.innerHTML = `<tr><td colspan="8" class="empty">No runs match the current filters.</td></tr>`;
           return;
         }
         runTableBody.innerHTML = runs
@@ -610,6 +625,10 @@
               <tr data-run-id="${escapeHtml(run.run_id)}">
                 <td>${escapeHtml(run.run_id)}</td>
                 <td>${escapeHtml(run.project_name || '')}</td>
+                <td>${formatNumber(keyMetricValue(run, 'Train/mean_reward'))}</td>
+                <td>${escapeHtml(formatRunReview(run))}</td>
+                <td>${escapeHtml(formatRunLineage(run))}</td>
+                <td>${escapeHtml(formatRunMedia(run))}</td>
                 <td>${escapeHtml(run.latest_checkpoint || '')}</td>
                 <td>${formatTimestamp(run.modified_time)}</td>
               </tr>
@@ -645,6 +664,32 @@
         else if (mode === 'run-id-desc') sorted.sort((a, b) => String(b.run_id).localeCompare(String(a.run_id)));
         else sorted.sort((a, b) => Number(b.modified_time || 0) - Number(a.modified_time || 0));
         return sorted;
+      }
+
+      function keyMetricValue(run, preferredTag) {
+        const metrics = run.key_metrics || {};
+        const metric = metrics[preferredTag] || Object.values(metrics)[0];
+        return metric?.last_value;
+      }
+
+      function formatRunReview(run) {
+        const verdict = run.review_verdict || 'unreviewed';
+        return run.recommended_checkpoint ? `${verdict} / ${run.recommended_checkpoint}` : verdict;
+      }
+
+      function formatRunLineage(run) {
+        const parts = [];
+        if (Number(run.parent_count || 0) > 0) parts.push(`${run.parent_count} parent`);
+        else if (run.parent_run_id) parts.push('parent');
+        if (Number(run.child_count || 0) > 0) parts.push(`${run.child_count} child`);
+        return parts.join(', ');
+      }
+
+      function formatRunMedia(run) {
+        const parts = [];
+        if (Number(run.video_count || 0) > 0) parts.push(`${run.video_count} video`);
+        if (Number(run.artifact_count || 0) > 0) parts.push(`${run.artifact_count} artifact`);
+        return parts.join(', ');
       }
 
       function populateCompareSelectors(runs) {
@@ -1188,7 +1233,7 @@
       }
 
       loadRuns().catch((error) => {
-        runTableBody.innerHTML = `<tr><td colspan="4" class="empty">${escapeHtml(error.message)}</td></tr>`;
+        runTableBody.innerHTML = `<tr><td colspan="8" class="empty">${escapeHtml(error.message)}</td></tr>`;
       });
       loadProjectConfigs().catch((error) => {
         projectConfigs.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;

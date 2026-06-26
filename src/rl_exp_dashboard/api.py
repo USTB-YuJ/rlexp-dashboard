@@ -7,6 +7,23 @@ from .config_diff import diff_configs
 from .models import LineageEdge
 from .storage import DashboardStore
 
+_DEFAULT_RUN_TABLE_METRICS = (
+    "Train/mean_reward",
+    "Episode/reward",
+    "Episode/return",
+    "Metrics/mean_reward",
+)
+
+
+def runs_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
+    projects_by_name = {item["name"]: item for item in store.list_projects()}
+    return {
+        "runs": [
+            _run_table_row(store, run, projects_by_name.get(run["project_name"]))
+            for run in store.list_runs(project)
+        ]
+    }
+
 
 def metric_summaries_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
     return {"run_id": run_id, "metrics": store.list_metric_summaries(run_id)}
@@ -153,6 +170,51 @@ def _payload_bool(value: Any) -> bool:
     return bool(value)
 
 
+def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str, Any] | None) -> Dict[str, Any]:
+    run_id = run["run_id"]
+    artifacts = store.list_run_artifacts(run_id)
+    observation = store.get_run_observation(run_id) or {}
+    parent_lineage = store.list_lineage(run_id)
+    child_lineage = store.list_child_lineage(run_id)
+    row = dict(run)
+    row.update(
+        {
+            "review_verdict": observation.get("verdict", "unreviewed"),
+            "recommended_checkpoint": observation.get("recommended_checkpoint"),
+            "video_count": sum(1 for artifact in artifacts if artifact["kind"] == "video"),
+            "artifact_count": sum(1 for artifact in artifacts if artifact["kind"] != "video"),
+            "parent_count": len(parent_lineage),
+            "child_count": len(child_lineage),
+            "has_parent": bool(run.get("parent_run_id") or parent_lineage),
+            "has_children": bool(child_lineage),
+            "key_metrics": _run_table_metrics(
+                store.list_metric_summaries(run_id),
+                project.get("preferred_metrics", []) if project else [],
+            ),
+        }
+    )
+    return row
+
+
+def _run_table_metrics(metrics: list[Dict[str, Any]], preferred_tags: list[str]) -> Dict[str, Dict[str, Any]]:
+    metrics_by_tag = {metric["tag"]: metric for metric in metrics}
+    ordered_tags = list(preferred_tags) or list(_DEFAULT_RUN_TABLE_METRICS)
+    selected = [metrics_by_tag[tag] for tag in ordered_tags if tag in metrics_by_tag]
+    if not selected and metrics:
+        selected = [metrics[0]]
+    return {metric["tag"]: _compact_metric_summary(metric) for metric in selected}
+
+
+def _compact_metric_summary(metric: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "tag": metric["tag"],
+        "last_value": metric.get("last_value"),
+        "last_step": metric.get("last_step"),
+        "window_means": metric.get("window_means", {}),
+        "slope_last_points": metric.get("slope_last_points"),
+    }
+
+
 def _metric_deltas(before_metrics: list[Dict[str, Any]], after_metrics: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
     before_by_tag = {metric["tag"]: metric for metric in before_metrics}
     after_by_tag = {metric["tag"]: metric for metric in after_metrics}
@@ -192,7 +254,7 @@ def create_app(db_path: Path):
 
     @app.get("/api/runs")
     def list_runs(project: str | None = None):
-        return {"runs": store.list_runs(project)}
+        return runs_payload(store, project)
 
     @app.get("/api/projects")
     def list_projects():

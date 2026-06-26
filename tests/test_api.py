@@ -11,6 +11,7 @@ from rl_exp_dashboard.api import (
     projects_payload,
     remote_sources_payload,
     run_detail_payload,
+    runs_payload,
     save_checkpoint_review_payload,
     save_lineage_edge_payload,
     save_run_observation_payload,
@@ -57,6 +58,37 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["run_id"], "group/run")
         self.assertEqual(payload["metrics"][0]["tag"], "Train/mean_reward")
         self.assertEqual(payload["metrics"][0]["window_means"]["mean100"], 1.5)
+
+    def test_runs_payload_includes_table_summary_signals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+            store.upsert_project(
+                "project",
+                Path(tmp) / "cache",
+                preferred_metrics=["Train/mean_reward"],
+            )
+            store.upsert_run_observation(
+                run_id="group/child",
+                verdict="mixed",
+                summary="Good flat, still weak stairs.",
+                tags=["reviewed"],
+                recommended_checkpoint="model_20.pt",
+            )
+
+            payload = runs_payload(store, "project")
+
+        by_run_id = {run["run_id"]: run for run in payload["runs"]}
+        child = by_run_id["group/child"]
+        parent = by_run_id["group/parent"]
+        self.assertEqual(child["review_verdict"], "mixed")
+        self.assertEqual(child["recommended_checkpoint"], "model_20.pt")
+        self.assertEqual(child["video_count"], 1)
+        self.assertEqual(child["artifact_count"], 1)
+        self.assertEqual(child["parent_count"], 1)
+        self.assertEqual(child["child_count"], 0)
+        self.assertEqual(parent["child_count"], 1)
+        self.assertEqual(child["key_metrics"]["Train/mean_reward"]["last_value"], 2.0)
+        self.assertEqual(child["key_metrics"]["Train/mean_reward"]["last_step"], 10)
 
     def test_metric_series_payload_returns_sampled_points(self):
         with tempfile.TemporaryDirectory() as tmp:
