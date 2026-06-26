@@ -195,6 +195,16 @@
         stroke: var(--accent);
         stroke-width: 2.5;
       }
+      .compare-chart-line-before {
+        fill: none;
+        stroke: #7d8da8;
+        stroke-width: 2.4;
+      }
+      .compare-chart-line-after {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2.4;
+      }
       .chart-axis {
         stroke: #aab6c8;
         stroke-width: 1;
@@ -1626,6 +1636,8 @@
           ${configDiffGroups(payload.config_diff_groups || [])}
           <h3 class="subhead">Config Diffs</h3>
           ${configDiffTable(payload.config_diffs || [])}
+          <h3 class="subhead">Metric Comparison Chart</h3>
+          ${renderCompareMetricChart(payload.metric_series_compare || [])}
           <h3 class="subhead">Human Verdict Comparison</h3>
           ${reviewComparePanel(payload.review_compare)}
           <h3 class="subhead">Metric Deltas</h3>
@@ -1688,6 +1700,48 @@
                 .join('')}
             </tbody>
           </table>
+        `;
+      }
+
+      function renderCompareMetricChart(seriesCompare) {
+        if (!seriesCompare || seriesCompare.length === 0) return `<div class="empty">No shared sampled metric series available.</div>`;
+        const comparison = seriesCompare[0];
+        const beforePoints = comparison.before?.points || [];
+        const afterPoints = comparison.after?.points || [];
+        if (beforePoints.length === 0 && afterPoints.length === 0) return `<div class="empty">No points available.</div>`;
+        const width = 640;
+        const height = 180;
+        const padding = 18;
+        const allPoints = [...beforePoints, ...afterPoints];
+        const steps = allPoints.map((point) => Number(point.step));
+        const values = allPoints.map((point) => Number(point.value));
+        const minStep = Math.min(...steps);
+        const maxStep = Math.max(...steps);
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        const stepRange = maxStep - minStep || 1;
+        const valueRange = maxValue - minValue || 1;
+        const linePoints = (points) =>
+          points
+            .map((point) => {
+              const x = padding + ((Number(point.step) - minStep) / stepRange) * (width - padding * 2);
+              const y = height - padding - ((Number(point.value) - minValue) / valueRange) * (height - padding * 2);
+              return `${x.toFixed(1)},${y.toFixed(1)}`;
+            })
+            .join(' ');
+        return `
+          <div class="metric-chart-panel">
+            <svg class="metric-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(comparison.tag)} comparison">
+              <line class="chart-axis" x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}"></line>
+              <line class="chart-axis" x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}"></line>
+              <polyline class="compare-chart-line-before" points="${linePoints(beforePoints)}"></polyline>
+              <polyline class="compare-chart-line-after" points="${linePoints(afterPoints)}"></polyline>
+            </svg>
+            <div class="chart-meta muted">
+              <span>${escapeHtml(comparison.tag)}</span>
+              <span>baseline ${beforePoints.length} pts / target ${afterPoints.length} pts</span>
+            </div>
+          </div>
         `;
       }
 

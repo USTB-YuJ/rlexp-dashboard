@@ -167,6 +167,7 @@ def compare_runs_payload(store: DashboardStore, before_run_id: str, after_run_id
             store.list_metric_summaries(before_run_id),
             store.list_metric_summaries(after_run_id),
         ),
+        "metric_series_compare": _metric_series_compare(store, before_run_id, after_run_id),
         "review_compare": {
             "before": _run_review_compare_summary(store, before_run_id),
             "after": _run_review_compare_summary(store, after_run_id),
@@ -776,6 +777,22 @@ def _metric_deltas(before_metrics: list[Dict[str, Any]], after_metrics: list[Dic
             }
         )
     return deltas
+
+
+def _metric_series_compare(store: DashboardStore, before_run_id: str, after_run_id: str) -> list[Dict[str, Any]]:
+    before_by_tag = {series["tag"]: series for series in store.list_metric_series(before_run_id)}
+    after_by_tag = {series["tag"]: series for series in store.list_metric_series(after_run_id)}
+    common_tags = set(before_by_tag) & set(after_by_tag)
+    preferred = [tag for tag in _DEFAULT_RUN_TABLE_METRICS if tag in common_tags]
+    remaining = sorted(common_tags - set(preferred))
+    return [
+        {
+            "tag": tag,
+            "before": before_by_tag[tag],
+            "after": after_by_tag[tag],
+        }
+        for tag in [*preferred, *remaining]
+    ]
 
 
 def create_app(db_path: Path):
