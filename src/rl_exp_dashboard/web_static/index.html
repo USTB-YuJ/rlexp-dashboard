@@ -421,40 +421,105 @@
       }
 
       function renderProjectConfigs(projects) {
-        if (projects.length === 0) {
-          projectConfigs.innerHTML = `<div class="empty">No project configs imported yet.</div>`;
-          return;
-        }
+        const projectRows =
+          projects.length === 0
+            ? `<div class="empty">No project configs imported yet.</div>`
+            : `<table aria-label="Project configs">
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Cache Root</th>
+                    <th>Parser</th>
+                    <th>Preferred Metrics</th>
+                    <th>Log Patterns</th>
+                    <th>Tags</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${projects
+                    .map(
+                      (project) => `
+                        <tr>
+                          <td>${escapeHtml(project.name)}</td>
+                          <td>${escapeHtml(project.local_cache_root || '')}</td>
+                          <td>${escapeHtml(project.parser_profile || '')}</td>
+                          <td>${escapeHtml(joinList(project.preferred_metrics))}</td>
+                          <td>${escapeHtml(joinList(project.log_patterns))}</td>
+                          <td>${escapeHtml(joinList(project.tag_schema))}</td>
+                        </tr>
+                      `,
+                    )
+                    .join('')}
+                </tbody>
+              </table>`;
         projectConfigs.innerHTML = `
-          <table aria-label="Project configs">
-            <thead>
-              <tr>
-                <th>Project</th>
-                <th>Cache Root</th>
-                <th>Parser</th>
-                <th>Preferred Metrics</th>
-                <th>Log Patterns</th>
-                <th>Tags</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${projects
-                .map(
-                  (project) => `
-                    <tr>
-                      <td>${escapeHtml(project.name)}</td>
-                      <td>${escapeHtml(project.local_cache_root || '')}</td>
-                      <td>${escapeHtml(project.parser_profile || '')}</td>
-                      <td>${escapeHtml(joinList(project.preferred_metrics))}</td>
-                      <td>${escapeHtml(joinList(project.log_patterns))}</td>
-                      <td>${escapeHtml(joinList(project.tag_schema))}</td>
-                    </tr>
-                  `,
-                )
-                .join('')}
-            </tbody>
-          </table>
+          ${projectForm(projects[0] || {})}
+          ${projectRows}
         `;
+        bindProjectForm();
+      }
+
+      function projectForm(project) {
+        return `
+          <h3 class="subhead">Create / Update Project</h3>
+          <form id="project-form">
+            <div class="form-row">
+              <label>
+                <div class="label">Project name</div>
+                <input name="name" value="${escapeHtml(project.name || '')}" required />
+              </label>
+              <label>
+                <div class="label">Local cache root</div>
+                <input name="local_cache_root" value="${escapeHtml(project.local_cache_root || '')}" required />
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Parser profile</div>
+                <input name="parser_profile" value="${escapeHtml(project.parser_profile || 'generic_tensorboard')}" />
+              </label>
+              <label>
+                <div class="label">Preferred metrics</div>
+                <input name="preferred_metrics" value="${escapeHtml(joinList(project.preferred_metrics))}" />
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Log patterns</div>
+                <input name="log_patterns" value="${escapeHtml(joinList(project.log_patterns))}" />
+              </label>
+              <label>
+                <div class="label">Tags</div>
+                <input name="tag_schema" value="${escapeHtml(joinList(project.tag_schema))}" />
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit">Save Project</button>
+            </div>
+          </form>
+        `;
+      }
+
+      function bindProjectForm() {
+        const form = document.getElementById('project-form');
+        if (!form) return;
+        form.addEventListener('submit', saveProjectConfig);
+      }
+
+      async function saveProjectConfig(event) {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        await postJson('/api/project', {
+          name: form.get('name'),
+          local_cache_root: form.get('local_cache_root'),
+          parser_profile: form.get('parser_profile'),
+          preferred_metrics: splitTags(form.get('preferred_metrics')),
+          log_patterns: splitTags(form.get('log_patterns')),
+          tag_schema: splitTags(form.get('tag_schema')),
+        });
+        await loadProjectConfigs();
+        await loadRuns();
+        await loadRemoteSources();
       }
 
       async function loadRemoteSources() {

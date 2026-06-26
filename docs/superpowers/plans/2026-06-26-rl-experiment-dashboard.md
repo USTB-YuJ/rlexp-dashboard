@@ -492,6 +492,20 @@
 - [x] **Step 3: Render a Parent Comparison panel in run detail.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 33: Dashboard Project Creation
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for project save payloads and dashboard project form hooks.**
+- [x] **Step 2: Add `save_project_payload()` and `/api/project` POST route.**
+- [x] **Step 3: Render a Create / Update Project form in Project Configs and refresh after save.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

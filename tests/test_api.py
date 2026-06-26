@@ -14,6 +14,7 @@ from rl_exp_dashboard.api import (
     runs_payload,
     save_checkpoint_review_payload,
     save_lineage_edge_payload,
+    save_project_payload,
     save_run_observation_payload,
     timeline_payload,
 )
@@ -413,6 +414,32 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["projects"][0]["name"], "project")
         self.assertEqual(payload["projects"][0]["parser_profile"], "rsl_rl_tensorboard")
         self.assertEqual(payload["projects"][0]["preferred_metrics"], ["Train/mean_reward"])
+
+    def test_save_project_payload_persists_dashboard_project_form_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = DashboardStore(Path(tmp) / "dashboard.sqlite3")
+            store.initialize()
+
+            saved = save_project_payload(
+                store,
+                {
+                    "name": "unitree_rl_mjlab",
+                    "local_cache_root": str(Path(tmp) / "cache"),
+                    "parser_profile": "rsl_rl_tensorboard",
+                    "preferred_metrics": "Train/mean_reward, Episode/length",
+                    "log_patterns": "logs/rsl_rl/*/*\nlogs/other/*/*",
+                    "tag_schema": ["good-flat", "bad-stairs"],
+                },
+            )
+            payload = projects_payload(store)
+
+        project = payload["projects"][0]
+        self.assertEqual(saved["project"]["name"], "unitree_rl_mjlab")
+        self.assertEqual(project["local_cache_root"], str(Path(tmp) / "cache"))
+        self.assertEqual(project["parser_profile"], "rsl_rl_tensorboard")
+        self.assertEqual(project["preferred_metrics"], ["Train/mean_reward", "Episode/length"])
+        self.assertEqual(project["log_patterns"], ["logs/rsl_rl/*/*", "logs/other/*/*"])
+        self.assertEqual(project["tag_schema"], ["good-flat", "bad-stairs"])
 
     def _store_with_parent_and_child(self, tmp_path: Path) -> DashboardStore:
         store = DashboardStore(tmp_path / "dashboard.sqlite3")

@@ -182,6 +182,20 @@ def projects_payload(store: DashboardStore) -> Dict[str, Any]:
     return {"projects": store.list_projects()}
 
 
+def save_project_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict[str, Any]:
+    name = str(payload["name"]).strip()
+    local_cache_root = Path(str(payload["local_cache_root"])).expanduser()
+    store.upsert_project(
+        name,
+        local_cache_root,
+        parser_profile=str(payload.get("parser_profile") or "generic_tensorboard"),
+        preferred_metrics=_payload_list(payload.get("preferred_metrics")),
+        log_patterns=_payload_list(payload.get("log_patterns")),
+        tag_schema=_payload_list(payload.get("tag_schema")),
+    )
+    return {"project": store.get_project(name)}
+
+
 def lineage_overview_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
     nodes = [
         {
@@ -257,6 +271,15 @@ def _payload_bool(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() not in {"0", "false", "no", "off", ""}
     return bool(value)
+
+
+def _payload_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    normalized = str(value).replace("\n", ",")
+    return [item.strip() for item in normalized.split(",") if item.strip()]
 
 
 def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str, Any] | None) -> Dict[str, Any]:
@@ -378,6 +401,10 @@ def create_app(db_path: Path):
     @app.get("/api/projects")
     def list_projects():
         return projects_payload(store)
+
+    @app.post("/api/project")
+    async def save_project(payload: dict):
+        return save_project_payload(store, payload)
 
     @app.get("/api/remote-sources")
     def list_remote_sources(project: str | None = None):
