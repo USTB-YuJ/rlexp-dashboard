@@ -168,10 +168,23 @@ def compare_runs_payload(store: DashboardStore, before_run_id: str, after_run_id
             store.list_metric_summaries(after_run_id),
         ),
         "metric_series_compare": _metric_series_compare(store, before_run_id, after_run_id),
+        "artifact_compare": {
+            "before": _run_artifact_compare(store, before_run_id),
+            "after": _run_artifact_compare(store, after_run_id),
+        },
         "review_compare": {
             "before": _run_review_compare_summary(store, before_run_id),
             "after": _run_review_compare_summary(store, after_run_id),
         },
+    }
+
+
+def _run_artifact_compare(store: DashboardStore, run_id: str) -> Dict[str, Any]:
+    artifacts = store.list_run_artifacts(run_id)
+    return {
+        "run_id": run_id,
+        "videos": [item for item in artifacts if item["kind"] == "video"],
+        "artifacts": [item for item in artifacts if item["kind"] != "video"],
     }
 
 

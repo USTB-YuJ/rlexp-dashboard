@@ -641,6 +641,62 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["review_compare"]["after"]["recommended_review_checkpoint"], "model_20.pt")
         self.assertEqual(payload["review_compare"]["after"]["best_review_score"], 0.72)
 
+    def test_compare_runs_payload_includes_video_artifact_comparison(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            store = DashboardStore(tmp_path / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project("project", tmp_path / "cache")
+            before_video = tmp_path / "before" / "videos" / "play" / "model_10.mp4"
+            before_artifact = tmp_path / "before" / "exports" / "policy.onnx"
+            after_video = tmp_path / "after" / "videos" / "play" / "model_20.mp4"
+            before_video.parent.mkdir(parents=True)
+            before_artifact.parent.mkdir(parents=True)
+            after_video.parent.mkdir(parents=True)
+            before_video.write_bytes(b"before-video")
+            before_artifact.write_bytes(b"before-onnx")
+            after_video.write_bytes(b"after-video")
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/before",
+                    name="before",
+                    group="group",
+                    path=tmp_path / "before",
+                    modified_time=1.0,
+                    videos=[before_video],
+                    artifacts=[before_artifact],
+                ),
+            )
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/after",
+                    name="after",
+                    group="group",
+                    path=tmp_path / "after",
+                    modified_time=2.0,
+                    videos=[after_video],
+                ),
+            )
+
+            payload = compare_runs_payload(store, "group/before", "group/after")
+
+        self.assertEqual(payload["artifact_compare"]["before"]["run_id"], "group/before")
+        self.assertEqual(payload["artifact_compare"]["after"]["run_id"], "group/after")
+        self.assertEqual(
+            [Path(item["path"]).name for item in payload["artifact_compare"]["before"]["videos"]],
+            ["model_10.mp4"],
+        )
+        self.assertEqual(
+            [Path(item["path"]).name for item in payload["artifact_compare"]["after"]["videos"]],
+            ["model_20.mp4"],
+        )
+        self.assertEqual(
+            [Path(item["path"]).name for item in payload["artifact_compare"]["before"]["artifacts"]],
+            ["policy.onnx"],
+        )
+
     def test_lineage_overview_payload_returns_nodes_and_edges(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))

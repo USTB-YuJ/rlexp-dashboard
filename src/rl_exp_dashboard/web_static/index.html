@@ -222,6 +222,9 @@
         background: #000;
         border-radius: 4px;
       }
+      .compare-video-preview {
+        max-height: 220px;
+      }
       .lineage-graph-panel {
         border: 1px solid var(--line);
         border-radius: 6px;
@@ -1640,6 +1643,8 @@
           ${renderCompareMetricChart(payload.metric_series_compare || [])}
           <h3 class="subhead">Human Verdict Comparison</h3>
           ${reviewComparePanel(payload.review_compare)}
+          <h3 class="subhead">Video Comparison</h3>
+          ${compareVideoPanel(payload.artifact_compare)}
           <h3 class="subhead">Metric Deltas</h3>
           ${metricDeltaTable(payload.metric_deltas || [])}
         `;
@@ -1741,6 +1746,44 @@
               <span>${escapeHtml(comparison.tag)}</span>
               <span>baseline ${beforePoints.length} pts / target ${afterPoints.length} pts</span>
             </div>
+          </div>
+        `;
+      }
+
+      function compareVideoPanel(artifactCompare) {
+        const before = artifactCompare?.before || { run_id: '', videos: [] };
+        const after = artifactCompare?.after || { run_id: '', videos: [] };
+        const beforeVideos = before.videos || [];
+        const afterVideos = after.videos || [];
+        if (beforeVideos.length === 0 && afterVideos.length === 0) {
+          return `<div class="empty">No videos indexed for either run.</div>`;
+        }
+        return `
+          <div class="grid">
+            ${compareVideoColumn('Baseline', before)}
+            ${compareVideoColumn('Target', after)}
+          </div>
+        `;
+      }
+
+      function compareVideoColumn(label, entry) {
+        const videos = entry.videos || [];
+        return `
+          <div class="field">
+            <div class="label">${escapeHtml(label)}</div>
+            <div class="value">${escapeHtml(entry.run_id || '')}</div>
+            ${
+              videos.length === 0
+                ? `<div class="empty">No videos indexed for this run.</div>`
+                : videos
+                    .map(
+                      (artifact) => `
+                        <video class="video-preview compare-video-preview" controls preload="metadata" src="${escapeHtml(artifactFileUrl(entry.run_id, artifact))}"></video>
+                        <div class="muted">${escapeHtml(artifact.name || artifact.path.split('/').pop())}</div>
+                      `,
+                    )
+                    .join('')
+            }
           </div>
         `;
       }

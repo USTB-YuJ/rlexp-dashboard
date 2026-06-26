@@ -906,6 +906,20 @@
 - [x] **Step 3: Render a two-run metric comparison chart in the bundled compare UI.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 62: Compare Video Artifacts
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for compare video/artifact payload and dashboard hooks.**
+- [x] **Step 2: Add before/after video and artifact summaries to compare payloads.**
+- [x] **Step 3: Render a side-by-side video comparison panel in the bundled compare UI.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
