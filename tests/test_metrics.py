@@ -1,6 +1,6 @@
 import unittest
 
-from rl_exp_dashboard.metrics import summarize_scalar_series
+from rl_exp_dashboard.metrics import sample_scalar_series, summarize_scalar_series
 
 
 class MetricSummaryTests(unittest.TestCase):
@@ -29,6 +29,25 @@ class MetricSummaryTests(unittest.TestCase):
 
     def test_empty_scalar_series_returns_none(self):
         self.assertIsNone(summarize_scalar_series("Train/mean_reward", []))
+
+    def test_sample_scalar_series_keeps_ordered_evenly_spaced_points(self):
+        points = [
+            (50, 5.0),
+            (0, 0.0),
+            (10, 1.0),
+            (20, 2.0),
+            (30, 3.0),
+            (40, 4.0),
+        ]
+
+        series = sample_scalar_series("Train/mean_reward", points, max_points=3)
+
+        self.assertEqual(series.tag, "Train/mean_reward")
+        self.assertEqual(series.original_count, 6)
+        self.assertEqual(series.points, [{"step": 0, "value": 0.0}, {"step": 20, "value": 2.0}, {"step": 50, "value": 5.0}])
+
+    def test_sample_scalar_series_returns_none_for_empty_points(self):
+        self.assertIsNone(sample_scalar_series("Train/mean_reward", []))
 
 
 if __name__ == "__main__":

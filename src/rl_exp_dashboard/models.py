@@ -37,6 +37,13 @@ class MetricSummary:
 
 
 @dataclass(frozen=True)
+class MetricSeries:
+    tag: str
+    points: List[Dict[str, float]] = field(default_factory=list)
+    original_count: int = 0
+
+
+@dataclass(frozen=True)
 class RunRecord:
     run_id: str
     name: str
@@ -48,6 +55,7 @@ class RunRecord:
     event_files: List[Path] = field(default_factory=list)
     checkpoints: List[CheckpointRecord] = field(default_factory=list)
     metric_summaries: List[MetricSummary] = field(default_factory=list)
+    metric_series: List[MetricSeries] = field(default_factory=list)
     videos: List[Path] = field(default_factory=list)
     artifacts: List[Path] = field(default_factory=list)
     parent_run_id: Optional[str] = None

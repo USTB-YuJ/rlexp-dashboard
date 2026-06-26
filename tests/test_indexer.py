@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from rl_exp_dashboard.indexer import LocalRunIndexer
-from rl_exp_dashboard.models import MetricSummary
+from rl_exp_dashboard.models import MetricSeries, MetricSummary
 from rl_exp_dashboard.structured_loader import load_structured_file
 
 
@@ -97,6 +97,29 @@ class LocalRunIndexerTests(unittest.TestCase):
 
         self.assertEqual(runs[0].metric_summaries[0].tag, "Train/mean_reward")
         self.assertEqual(runs[0].metric_summaries[0].last_value, 2.0)
+
+    def test_discover_runs_uses_metric_series_reader_for_event_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_dir = root / "group" / "run-a"
+            run_dir.mkdir(parents=True)
+            event_file = run_dir / "events.out.tfevents.fake"
+            event_file.write_text("event", encoding="utf-8")
+
+            def metric_series_reader(event_files):
+                self.assertEqual([path.name for path in event_files], ["events.out.tfevents.fake"])
+                return [
+                    MetricSeries(
+                        tag="Train/mean_reward",
+                        points=[{"step": 0, "value": 1.0}, {"step": 10, "value": 2.0}],
+                        original_count=2,
+                    )
+                ]
+
+            runs = LocalRunIndexer(root, metric_series_reader=metric_series_reader).discover_runs()
+
+        self.assertEqual(runs[0].metric_series[0].tag, "Train/mean_reward")
+        self.assertEqual(runs[0].metric_series[0].points[-1]["value"], 2.0)
 
 
 if __name__ == "__main__":

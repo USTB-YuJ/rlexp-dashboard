@@ -11,6 +11,10 @@ def metric_summaries_payload(store: DashboardStore, run_id: str) -> Dict[str, An
     return {"run_id": run_id, "metrics": store.list_metric_summaries(run_id)}
 
 
+def metric_series_payload(store: DashboardStore, run_id: str, tag: str | None = None) -> Dict[str, Any]:
+    return {"run_id": run_id, "series": store.list_metric_series(run_id, tag=tag)}
+
+
 def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
     run = store.get_run(run_id)
     if run is None:
@@ -146,6 +150,10 @@ def create_app(db_path: Path):
     @app.get("/api/metrics")
     def list_metrics(run_id: str):
         return metric_summaries_payload(store, run_id)
+
+    @app.get("/api/metric-series")
+    def list_metric_series(run_id: str, tag: str | None = None):
+        return metric_series_payload(store, run_id, tag=tag)
 
     @app.get("/api/runs/{run_id:path}")
     def get_run(run_id: str):

@@ -4,13 +4,14 @@ from pathlib import Path
 
 from rl_exp_dashboard.api import (
     compare_runs_payload,
+    metric_series_payload,
     metric_summaries_payload,
     remote_sources_payload,
     run_detail_payload,
     save_checkpoint_review_payload,
     save_run_observation_payload,
 )
-from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
+from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSeries, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
 from rl_exp_dashboard.sync import RemoteSource
 
@@ -52,6 +53,42 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["run_id"], "group/run")
         self.assertEqual(payload["metrics"][0]["tag"], "Train/mean_reward")
         self.assertEqual(payload["metrics"][0]["window_means"]["mean100"], 1.5)
+
+    def test_metric_series_payload_returns_sampled_points(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "dashboard.sqlite3"
+            store = DashboardStore(db_path)
+            store.initialize()
+            store.upsert_project("project", Path(tmp) / "cache")
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/run",
+                    name="run",
+                    group="group",
+                    path=Path(tmp) / "run",
+                    modified_time=1.0,
+                    metric_series=[
+                        MetricSeries(
+                            tag="Train/mean_reward",
+                            points=[{"step": 0, "value": 1.0}, {"step": 10, "value": 2.0}],
+                            original_count=2,
+                        ),
+                        MetricSeries(
+                            tag="Episode/length",
+                            points=[{"step": 0, "value": 100.0}],
+                            original_count=1,
+                        ),
+                    ],
+                ),
+            )
+
+            payload = metric_series_payload(store, "group/run", tag="Train/mean_reward")
+
+        self.assertEqual(payload["run_id"], "group/run")
+        self.assertEqual(len(payload["series"]), 1)
+        self.assertEqual(payload["series"][0]["tag"], "Train/mean_reward")
+        self.assertEqual(payload["series"][0]["points"][-1]["value"], 2.0)
 
     def test_run_detail_payload_combines_run_checkpoints_metrics_and_lineage(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -188,6 +225,13 @@ class ApiPayloadTests(unittest.TestCase):
                         count=1,
                     )
                 ],
+                metric_series=[
+                    MetricSeries(
+                        tag="Train/mean_reward",
+                        points=[{"step": 0, "value": 1.0}],
+                        original_count=1,
+                    )
+                ],
             ),
         )
         store.upsert_run(
@@ -218,6 +262,13 @@ class ApiPayloadTests(unittest.TestCase):
                         min_value=2.0,
                         max_value=2.0,
                         count=1,
+                    )
+                ],
+                metric_series=[
+                    MetricSeries(
+                        tag="Train/mean_reward",
+                        points=[{"step": 0, "value": 2.0}],
+                        original_count=1,
                     )
                 ],
             ),

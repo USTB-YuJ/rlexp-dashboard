@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List
 
-from .metrics import read_tensorboard_metric_summaries
-from .models import CheckpointRecord, MetricSummary, RunRecord
+from .metrics import read_tensorboard_metric_series, read_tensorboard_metric_summaries
+from .models import CheckpointRecord, MetricSeries, MetricSummary, RunRecord
 from .structured_loader import load_structured_file
 
 
@@ -20,9 +20,11 @@ class LocalRunIndexer:
         self,
         log_root: Path,
         metric_reader: Callable[[List[Path]], List[MetricSummary]] | None = None,
+        metric_series_reader: Callable[[List[Path]], List[MetricSeries]] | None = None,
     ):
         self.log_root = Path(log_root)
         self.metric_reader = metric_reader or read_tensorboard_metric_summaries
+        self.metric_series_reader = metric_series_reader or read_tensorboard_metric_series
 
     def discover_runs(self) -> List[RunRecord]:
         if not self.log_root.exists():
@@ -52,6 +54,7 @@ class LocalRunIndexer:
         checkpoints = self._find_checkpoints(run_dir)
         event_files = sorted(run_dir.glob("events.out.tfevents*"))
         metric_summaries = self.metric_reader(event_files) if event_files else []
+        metric_series = self.metric_series_reader(event_files) if event_files else []
         videos = self._find_files_by_suffix(run_dir, _VIDEO_SUFFIXES)
         artifacts = self._find_files_by_suffix(run_dir, _ARTIFACT_SUFFIXES)
 
@@ -66,6 +69,7 @@ class LocalRunIndexer:
             event_files=event_files,
             checkpoints=checkpoints,
             metric_summaries=metric_summaries,
+            metric_series=metric_series,
             videos=videos,
             artifacts=artifacts,
         )

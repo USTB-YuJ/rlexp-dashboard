@@ -84,6 +84,17 @@ class DashboardStore:
                     primary key (run_id, tag)
                 );
 
+                create table if not exists metric_series (
+                    run_id text not null references runs(run_id),
+                    tag text not null,
+                    points_json text not null,
+                    original_count integer not null,
+                    sampled_count integer not null,
+                    first_step integer,
+                    last_step integer,
+                    primary key (run_id, tag)
+                );
+
                 create table if not exists lineage_edges (
                     parent_run_id text not null,
                     child_run_id text not null,
@@ -307,6 +318,27 @@ class DashboardStore:
                     for metric in run.metric_summaries
                 ],
             )
+            conn.execute("delete from metric_series where run_id = ?", (run.run_id,))
+            conn.executemany(
+                """
+                insert into metric_series (
+                    run_id, tag, points_json, original_count, sampled_count, first_step, last_step
+                )
+                values (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        run.run_id,
+                        series.tag,
+                        json.dumps(series.points),
+                        series.original_count,
+                        len(series.points),
+                        _series_step(series.points, 0),
+                        _series_step(series.points, -1),
+                    )
+                    for series in run.metric_series
+                ],
+            )
 
     def upsert_lineage(self, edge: LineageEdge) -> None:
         with self._connect() as conn:
@@ -391,6 +423,28 @@ class DashboardStore:
                 "count": row["count"],
                 "window_means": json.loads(row["window_means_json"]),
                 "slope_last_points": row["slope_last_points"],
+            }
+            for row in rows
+        ]
+
+    def list_metric_series(self, run_id: str, tag: Optional[str] = None) -> List[Dict[str, Any]]:
+        query = "select * from metric_series where run_id = ?"
+        params: tuple[Any, ...] = (run_id,)
+        if tag is not None:
+            query += " and tag = ?"
+            params = (run_id, tag)
+        query += " order by tag"
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [
+            {
+                "run_id": row["run_id"],
+                "tag": row["tag"],
+                "points": json.loads(row["points_json"]),
+                "original_count": row["original_count"],
+                "sampled_count": row["sampled_count"],
+                "first_step": row["first_step"],
+                "last_step": row["last_step"],
             }
             for row in rows
         ]
@@ -559,3 +613,9 @@ class DashboardStore:
             "parent_run_id": row["parent_run_id"],
             "parent_checkpoint": row["parent_checkpoint"],
         }
+
+
+def _series_step(points: List[Dict[str, Any]], index: int) -> Optional[int]:
+    if not points:
+        return None
+    return int(points[index]["step"])

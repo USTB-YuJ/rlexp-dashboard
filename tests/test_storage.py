@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSummary, RunRecord
+from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSeries, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
 from rl_exp_dashboard.sync import RemoteSource
 
@@ -61,6 +61,13 @@ class DashboardStoreTests(unittest.TestCase):
                             slope_last_points=0.04,
                         )
                     ],
+                    metric_series=[
+                        MetricSeries(
+                            tag="Train/mean_reward",
+                            points=[{"step": 0, "value": 1.0}, {"step": 100, "value": 5.0}],
+                            original_count=2,
+                        )
+                    ],
                 ),
             )
             store.upsert_lineage(
@@ -78,6 +85,7 @@ class DashboardStoreTests(unittest.TestCase):
             child = next(run for run in runs if run["run_id"] == "group/child")
             checkpoints = store.list_checkpoints("group/child")
             metrics = store.list_metric_summaries("group/child")
+            series = store.list_metric_series("group/child")
             lineage = store.list_lineage("group/child")
 
         self.assertEqual(child["latest_checkpoint"], "model_100.pt")
@@ -89,6 +97,9 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(metrics[0]["last_value"], 5.0)
         self.assertEqual(metrics[0]["window_means"]["mean100"], 3.0)
         self.assertEqual(metrics[0]["slope_last_points"], 0.04)
+        self.assertEqual(series[0]["tag"], "Train/mean_reward")
+        self.assertEqual(series[0]["points"], [{"step": 0, "value": 1.0}, {"step": 100, "value": 5.0}])
+        self.assertEqual(series[0]["original_count"], 2)
         self.assertEqual(lineage[0]["parent_run_id"], "group/parent")
         self.assertEqual(lineage[0]["relationship"], "finetune")
         self.assertEqual(lineage[0]["intended_change"], "lower entropy")

@@ -165,9 +165,30 @@
 - [x] **Step 6: Write failing static dashboard test for observation/review UI.**
 - [x] **Step 7: Add manual observation and checkpoint review panels to the bundled dashboard shell.**
 
+## Task 10: Sampled Metric Time-Series Charts
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/models.py`
+- Modify: `src/rl_exp_dashboard/metrics.py`
+- Modify: `src/rl_exp_dashboard/indexer.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_metrics.py`
+- Modify: `tests/test_indexer.py`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing tests for scalar series sampling, indexer injection, storage, API payload, and static chart hooks.**
+- [x] **Step 2: Implement `MetricSeries`, scalar series downsampling, and optional TensorBoard series reading.**
+- [x] **Step 3: Persist sampled series in SQLite and expose query helpers.**
+- [x] **Step 4: Add metric series API payload/route.**
+- [x] **Step 5: Add a minimal SVG trend chart to the bundled dashboard.**
+- [x] **Step 6: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
-- Sampled metric time-series storage for charts.
 - Actual remote sync execution with SSH/rsync/scp.
 - React/Vite frontend.
 - Rich compare, lineage graph, checkpoint review UI.

@@ -152,6 +152,34 @@
         display: flex;
         justify-content: flex-end;
       }
+      .metric-chart-panel {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+      }
+      .metric-chart {
+        display: block;
+        width: 100%;
+        height: 180px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: #fbfcfe;
+      }
+      .chart-line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2.5;
+      }
+      .chart-axis {
+        stroke: #aab6c8;
+        stroke-width: 1;
+      }
+      .chart-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 8px;
+      }
       @media (max-width: 920px) {
         main {
           grid-template-columns: 1fr;
@@ -237,9 +265,13 @@
       async function loadRunDetail(runId) {
         selectedRun.textContent = runId;
         runDetail.innerHTML = `<div class="empty">Loading detail...</div>`;
-        const response = await fetch(`/api/run-detail?run_id=${encodeURIComponent(runId)}`);
-        const payload = await response.json();
-        renderRunDetail(payload);
+        const [detailResponse, seriesResponse] = await Promise.all([
+          fetch(`/api/run-detail?run_id=${encodeURIComponent(runId)}`),
+          fetch(`/api/metric-series?run_id=${encodeURIComponent(runId)}`),
+        ]);
+        const payload = await detailResponse.json();
+        const seriesPayload = await seriesResponse.json();
+        renderRunDetail({ ...payload, metric_series: seriesPayload.series || [] });
       }
 
       function renderRunDetail(payload) {
@@ -261,6 +293,9 @@
 
           <h3 class="subhead">Metric Summaries</h3>
           ${metricTable(payload.metrics || [])}
+
+          <h3 class="subhead">Metric Trend</h3>
+          ${metricTrend(payload.metric_series || [])}
 
           <h3 class="subhead">Checkpoints</h3>
           ${checkpointTable(payload.checkpoints || [])}
@@ -310,6 +345,60 @@
                 .join('')}
             </tbody>
           </table>
+        `;
+      }
+
+      function metricTrend(seriesList) {
+        const series = selectMetricSeries(seriesList);
+        if (!series) return `<div class="empty">No sampled metric series indexed for this run.</div>`;
+        return `
+          <div class="metric-chart-panel">
+            ${renderMetricChart(series)}
+            <div class="chart-meta muted">
+              <span>${escapeHtml(series.tag)}</span>
+              <span>${series.sampled_count || series.points.length}/${series.original_count} points</span>
+            </div>
+          </div>
+        `;
+      }
+
+      function selectMetricSeries(seriesList) {
+        if (!seriesList || seriesList.length === 0) return null;
+        const preferred = ['Train/mean_reward', 'Episode/reward', 'Episode/return', 'Metrics/mean_reward'];
+        for (const tag of preferred) {
+          const match = seriesList.find((series) => series.tag === tag);
+          if (match) return match;
+        }
+        return seriesList[0];
+      }
+
+      function renderMetricChart(series) {
+        const points = series.points || [];
+        if (points.length === 0) return `<div class="empty">No points available.</div>`;
+        const width = 640;
+        const height = 180;
+        const padding = 18;
+        const steps = points.map((point) => Number(point.step));
+        const values = points.map((point) => Number(point.value));
+        const minStep = Math.min(...steps);
+        const maxStep = Math.max(...steps);
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        const stepRange = maxStep - minStep || 1;
+        const valueRange = maxValue - minValue || 1;
+        const polyline = points
+          .map((point) => {
+            const x = padding + ((Number(point.step) - minStep) / stepRange) * (width - padding * 2);
+            const y = height - padding - ((Number(point.value) - minValue) / valueRange) * (height - padding * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          })
+          .join(' ');
+        return `
+          <svg id="metric-chart" class="metric-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(series.tag)} trend">
+            <line class="chart-axis" x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}"></line>
+            <line class="chart-axis" x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}"></line>
+            <polyline class="chart-line" points="${polyline}"></polyline>
+          </svg>
         `;
       }
 
