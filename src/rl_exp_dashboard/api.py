@@ -58,14 +58,25 @@ def metric_series_payload(store: DashboardStore, run_id: str, tag: str | None = 
 def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
     run = store.get_run(run_id)
     if run is None:
-        return {"run": None, "checkpoints": [], "metrics": [], "artifacts": [], "parent_lineage": [], "child_lineage": []}
+        return {
+            "run": None,
+            "checkpoints": [],
+            "metrics": [],
+            "artifacts": [],
+            "parent_lineage": [],
+            "child_lineage": [],
+            "parent_compare": None,
+        }
+    parent_lineage = store.list_lineage(run_id)
+    child_lineage = store.list_child_lineage(run_id)
     return {
         "run": run,
         "checkpoints": store.list_checkpoints(run_id),
         "artifacts": store.list_run_artifacts(run_id),
         "metrics": store.list_metric_summaries(run_id),
-        "parent_lineage": store.list_lineage(run_id),
-        "child_lineage": store.list_child_lineage(run_id),
+        "parent_lineage": parent_lineage,
+        "child_lineage": child_lineage,
+        "parent_compare": _parent_compare_summary(store, run, parent_lineage),
         "observation": store.get_run_observation(run_id),
         "checkpoint_reviews": store.list_checkpoint_reviews(run_id),
     }
@@ -132,6 +143,30 @@ def _config_diff_group_key(path: str) -> str | None:
     if ".curriculum." in normalized or ".termination." in normalized or ".terminations." in normalized:
         return "curriculum_termination"
     return None
+
+
+def _parent_compare_summary(
+    store: DashboardStore,
+    run: Dict[str, Any],
+    parent_lineage: list[Dict[str, Any]],
+) -> Dict[str, Any] | None:
+    parent_edge = parent_lineage[0] if parent_lineage else {}
+    parent_run_id = parent_edge.get("parent_run_id") or run.get("parent_run_id")
+    if not parent_run_id or store.get_run(parent_run_id) is None:
+        return None
+
+    comparison = compare_runs_payload(store, parent_run_id, run["run_id"])
+    return {
+        "parent_run_id": parent_run_id,
+        "child_run_id": run["run_id"],
+        "relationship": parent_edge.get("relationship") or "resume",
+        "parent_checkpoint": parent_edge.get("parent_checkpoint") or run.get("parent_checkpoint"),
+        "intended_change": parent_edge.get("intended_change", ""),
+        "note": parent_edge.get("note", ""),
+        "config_diff_groups": comparison["config_diff_groups"],
+        "config_diffs": comparison["config_diffs"],
+        "metric_deltas": comparison["metric_deltas"],
+    }
 
 
 def remote_sources_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:

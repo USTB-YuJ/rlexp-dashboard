@@ -855,6 +855,9 @@
           <h3 class="subhead">Params Browser</h3>
           ${paramsTable(run.params || {})}
 
+          <h3 class="subhead">Parent Comparison</h3>
+          ${parentComparePanel(payload.parent_compare)}
+
           <h3 class="subhead">Manual Observation</h3>
           ${observationPanel(run.run_id, payload.observation)}
 
@@ -880,6 +883,22 @@
           ${lineageTable(payload.parent_lineage || [], payload.child_lineage || [])}
         `;
         bindObservationForms(run.run_id);
+      }
+
+      function parentComparePanel(parentCompare) {
+        if (!parentCompare) return `<div class="empty">No parent comparison available for this run.</div>`;
+        return `
+          <div class="grid">
+            ${field('Parent Run', parentCompare.parent_run_id || '')}
+            ${field('Parent Checkpoint', parentCompare.parent_checkpoint || '')}
+            ${field('Relationship', parentCompare.relationship || '')}
+            ${field('Intended Change', parentCompare.intended_change || '')}
+          </div>
+          <h4 class="subhead">Grouped Config Diffs</h4>
+          ${configDiffGroups(parentCompare.config_diff_groups || [])}
+          <h4 class="subhead">Metric Deltas</h4>
+          ${metricDeltaTable(parentCompare.metric_deltas || [])}
+        `;
       }
 
       async function loadCompareResult() {

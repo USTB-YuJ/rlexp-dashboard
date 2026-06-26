@@ -195,6 +195,25 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual([artifact["kind"] for artifact in payload["artifacts"]], ["artifact", "video"])
         self.assertEqual([Path(artifact["path"]).name for artifact in payload["artifacts"]], ["policy.onnx", "model_20.mp4"])
 
+    def test_run_detail_payload_includes_parent_comparison_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+
+            payload = run_detail_payload(store, "group/child")
+
+        parent_compare = payload["parent_compare"]
+        groups = {group["key"]: group for group in parent_compare["config_diff_groups"]}
+        deltas = {delta["tag"]: delta for delta in parent_compare["metric_deltas"]}
+        self.assertEqual(parent_compare["parent_run_id"], "group/parent")
+        self.assertEqual(parent_compare["child_run_id"], "group/child")
+        self.assertEqual(parent_compare["relationship"], "finetune")
+        self.assertEqual(parent_compare["parent_checkpoint"], "model_10.pt")
+        self.assertEqual(parent_compare["intended_change"], "lower entropy")
+        self.assertEqual(groups["algorithm"]["diffs"][0]["path"], "agent.algorithm.entropy_coef")
+        self.assertEqual(groups["algorithm"]["diffs"][0]["before"], 0.01)
+        self.assertEqual(groups["algorithm"]["diffs"][0]["after"], 0.005)
+        self.assertEqual(deltas["Train/mean_reward"]["delta_last_value"], 1.0)
+
     def test_artifact_file_path_only_allows_indexed_run_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))

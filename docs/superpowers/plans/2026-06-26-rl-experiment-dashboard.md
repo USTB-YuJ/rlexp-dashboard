@@ -478,6 +478,20 @@
 - [x] **Step 3: Render grouped compare diff panels before the full diff table.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 32: Run Detail Parent Comparison
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for parent comparison summary in run detail and dashboard hooks.**
+- [x] **Step 2: Add `parent_compare` to run detail payload using lineage, grouped config diffs, and metric deltas.**
+- [x] **Step 3: Render a Parent Comparison panel in run detail.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
