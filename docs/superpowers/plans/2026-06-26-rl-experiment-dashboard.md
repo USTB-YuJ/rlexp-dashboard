@@ -691,6 +691,20 @@
 - [x] **Step 3: Add checkpoint review form controls for score and recommended status, preserving video path submission.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 47: Run Table Checkpoint Review Summary
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for run table payload checkpoint review summary fields and dashboard formatter hooks.**
+- [x] **Step 2: Add recommended/best checkpoint review summary fields to `runs_payload()` rows.**
+- [x] **Step 3: Include checkpoint review summaries in the bundled run table Review column and search text.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

@@ -440,10 +440,12 @@ def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str
     parent_lineage = store.list_lineage(run_id)
     child_lineage = store.list_child_lineage(run_id)
     row = dict(run)
+    review_summary = _checkpoint_review_summary(checkpoint_reviews)
     row.update(
         {
             "review_verdict": observation.get("verdict", "unreviewed"),
             "recommended_checkpoint": observation.get("recommended_checkpoint"),
+            **review_summary,
             "has_observation": bool(observation),
             "has_reviewed_checkpoint": bool(checkpoint_reviews),
             "video_count": sum(1 for artifact in artifacts if artifact["kind"] == "video"),
@@ -459,6 +461,20 @@ def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str
         }
     )
     return row
+
+
+def _checkpoint_review_summary(checkpoint_reviews: list[Dict[str, Any]]) -> Dict[str, Any]:
+    recommended = next((review for review in checkpoint_reviews if review.get("recommended")), None)
+    scored_reviews = [review for review in checkpoint_reviews if review.get("score") is not None]
+    best = max(scored_reviews, key=lambda review: float(review["score"])) if scored_reviews else None
+    return {
+        "recommended_review_checkpoint": recommended.get("checkpoint") if recommended else None,
+        "recommended_review_status": recommended.get("status") if recommended else None,
+        "recommended_review_score": recommended.get("score") if recommended else None,
+        "best_review_checkpoint": best.get("checkpoint") if best else None,
+        "best_review_status": best.get("status") if best else None,
+        "best_review_score": best.get("score") if best else None,
+    }
 
 
 def _timeline_entry(store: DashboardStore, run: Dict[str, Any], project: Dict[str, Any] | None) -> Dict[str, Any]:

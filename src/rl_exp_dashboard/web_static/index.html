@@ -1197,6 +1197,7 @@
             run.latest_checkpoint,
             run.review_verdict,
             run.recommended_checkpoint,
+            formatCheckpointReviewSummary(run),
             formatRunLineage(run),
             formatRunMedia(run),
             formatTimestamp(run.start_time),
@@ -1274,7 +1275,26 @@
 
       function formatRunReview(run) {
         const verdict = run.review_verdict || 'unreviewed';
-        return run.recommended_checkpoint ? `${verdict} / ${run.recommended_checkpoint}` : verdict;
+        const parts = [verdict];
+        if (run.recommended_checkpoint) parts.push(run.recommended_checkpoint);
+        const checkpointSummary = formatCheckpointReviewSummary(run);
+        if (checkpointSummary) parts.push(checkpointSummary);
+        return parts.join(' / ');
+      }
+
+      function formatCheckpointReviewSummary(run) {
+        if (run.recommended_review_checkpoint) {
+          return `review rec ${run.recommended_review_checkpoint}${formatReviewScore(run.recommended_review_score)}`;
+        }
+        if (run.best_review_checkpoint) {
+          return `review best ${run.best_review_checkpoint}${formatReviewScore(run.best_review_score)}`;
+        }
+        return run.has_reviewed_checkpoint ? 'checkpoint reviewed' : '';
+      }
+
+      function formatReviewScore(score) {
+        if (score === null || score === undefined || score === '') return '';
+        return ` score ${formatNumber(score)}`;
       }
 
       function formatRunLineage(run) {

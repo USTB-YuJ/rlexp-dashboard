@@ -85,6 +85,8 @@ class ApiPayloadTests(unittest.TestCase):
                 status="mixed",
                 notes="Visual review done.",
                 tags=["reviewed"],
+                score=0.72,
+                recommended=True,
             )
 
             payload = runs_payload(store, "project")
@@ -96,6 +98,10 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(child["algorithm_name"], "rsl_rl_ppo")
         self.assertEqual(child["review_verdict"], "mixed")
         self.assertEqual(child["recommended_checkpoint"], "model_20.pt")
+        self.assertEqual(child["recommended_review_checkpoint"], "model_20.pt")
+        self.assertEqual(child["best_review_checkpoint"], "model_20.pt")
+        self.assertEqual(child["best_review_score"], 0.72)
+        self.assertEqual(child["best_review_status"], "mixed")
         self.assertEqual(child["has_observation"], True)
         self.assertEqual(child["has_reviewed_checkpoint"], True)
         self.assertEqual(child["video_count"], 1)
