@@ -293,6 +293,17 @@
 - [x] **Step 3: Include `.toml` in local run param discovery.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 19: Remote Source Status Panel
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing static dashboard tests for a remote source status panel, `/api/remote-sources` call, and render hook.**
+- [x] **Step 2: Add a bundled dashboard panel listing configured remote sources and latest sync status.**
+- [x] **Step 3: Load remote source status on page load and via refresh without changing existing APIs.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
