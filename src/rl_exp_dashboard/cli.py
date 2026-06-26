@@ -41,7 +41,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     index = subparsers.add_parser("index", help="Index a local RL log root into SQLite.")
     index.add_argument("--project", required=True, help="Project name to associate with discovered runs.")
-    index.add_argument("--log-root", required=True, type=Path, help="Local log root to scan.")
+    index.add_argument("--log-root", type=Path, help="Local log root to scan. Defaults to imported project cache root.")
     index.add_argument("--db", required=True, type=Path, help="SQLite database path.")
 
     serve_parser = subparsers.add_parser("serve", help="Start the local dashboard server.")
@@ -58,13 +58,13 @@ def _build_parser() -> argparse.ArgumentParser:
     sync_parser = subparsers.add_parser("sync", help="Preview or run a remote log sync.")
     sync_parser.add_argument("--project", required=True, help="Project name.")
     sync_parser.add_argument("--source-name", required=True, help="Remote source display name.")
-    sync_parser.add_argument("--host", required=True, help="SSH host.")
-    sync_parser.add_argument("--user", required=True, help="SSH user.")
-    sync_parser.add_argument("--port", default=22, type=int, help="SSH port.")
-    sync_parser.add_argument("--remote-log-root", required=True, help="Remote log root.")
-    sync_parser.add_argument("--cache-root", required=True, type=Path, help="Local cache root.")
+    sync_parser.add_argument("--host", help="SSH host. Defaults to imported remote source host.")
+    sync_parser.add_argument("--user", help="SSH user. Defaults to imported remote source user.")
+    sync_parser.add_argument("--port", type=int, help="SSH port. Defaults to imported remote source port or 22.")
+    sync_parser.add_argument("--remote-log-root", help="Remote log root. Defaults to imported remote source root.")
+    sync_parser.add_argument("--cache-root", type=Path, help="Local cache root. Defaults to imported project cache root.")
     sync_parser.add_argument("--db", required=True, type=Path, help="SQLite database path.")
-    sync_parser.add_argument("--method", default="rsync", choices=["rsync", "scp", "ssh-tar"], help="Sync method.")
+    sync_parser.add_argument("--method", choices=["rsync", "scp", "ssh-tar"], help="Sync method.")
     sync_parser.add_argument("--include-videos", action="store_true", help="Include play videos in sync plan.")
     sync_parser.add_argument("--dry-run", action="store_true", help="Preview command and do not execute.")
 
@@ -77,9 +77,10 @@ def _index(
 ) -> int:
     store = DashboardStore(args.db)
     store.initialize()
-    store.upsert_project(args.project, local_cache_root=args.log_root)
+    log_root = _resolve_log_root(store, args.project, args.log_root)
+    store.upsert_project(args.project, local_cache_root=log_root)
 
-    runs = LocalRunIndexer(args.log_root, metric_reader=metric_reader).discover_runs()
+    runs = LocalRunIndexer(log_root, metric_reader=metric_reader).discover_runs()
     for run in runs:
         store.upsert_run(args.project, run)
         if run.parent_run_id:
@@ -122,20 +123,13 @@ def _persist_project_config(store: DashboardStore, config: ProjectConfig) -> Non
 def _sync(args: argparse.Namespace, runner: Optional[SyncRunner] = None) -> int:
     store = DashboardStore(args.db)
     store.initialize()
-    store.upsert_project(args.project, local_cache_root=args.cache_root)
-    source = RemoteSource(
-        name=args.source_name,
-        host=args.host,
-        user=args.user,
-        port=args.port,
-        remote_log_root=args.remote_log_root,
-        project=args.project,
-        method=args.method,
-    )
+    cache_root = _resolve_cache_root(store, args.project, args.cache_root)
+    source = _resolve_remote_source(store, args)
+    store.upsert_project(args.project, local_cache_root=cache_root)
     store.upsert_remote_source(source)
     plan = build_sync_plan(
         source,
-        cache_root=args.cache_root,
+        cache_root=cache_root,
         dry_run=args.dry_run,
         include_videos=args.include_videos,
     )
@@ -163,6 +157,48 @@ def _sync(args: argparse.Namespace, runner: Optional[SyncRunner] = None) -> int:
     )
     print(f"Sync {result.status}: {message}".rstrip())
     return 0 if result.status == "completed" else result.return_code
+
+
+def _resolve_log_root(store: DashboardStore, project_name: str, explicit_log_root: Optional[Path]) -> Path:
+    if explicit_log_root is not None:
+        return explicit_log_root
+    project = store.get_project(project_name)
+    if project is None:
+        raise SystemExit(f"Project `{project_name}` has not been imported and --log-root was not provided.")
+    return Path(project["local_cache_root"])
+
+
+def _resolve_cache_root(store: DashboardStore, project_name: str, explicit_cache_root: Optional[Path]) -> Path:
+    if explicit_cache_root is not None:
+        return explicit_cache_root
+    project = store.get_project(project_name)
+    if project is None:
+        raise SystemExit(f"Project `{project_name}` has not been imported and --cache-root was not provided.")
+    return Path(project["local_cache_root"])
+
+
+def _resolve_remote_source(store: DashboardStore, args: argparse.Namespace) -> RemoteSource:
+    imported_source = next(
+        (source for source in store.list_remote_sources(args.project) if source["name"] == args.source_name),
+        None,
+    )
+    host = args.host or (imported_source or {}).get("host")
+    user = args.user or (imported_source or {}).get("user")
+    remote_log_root = args.remote_log_root or (imported_source or {}).get("remote_log_root")
+    if not host or not user or not remote_log_root:
+        raise SystemExit(
+            f"Remote source `{args.source_name}` for project `{args.project}` has not been imported "
+            "and --host/--user/--remote-log-root were not fully provided."
+        )
+    return RemoteSource(
+        name=args.source_name,
+        host=str(host),
+        user=str(user),
+        port=int(args.port if args.port is not None else (imported_source or {}).get("port", 22)),
+        remote_log_root=str(remote_log_root),
+        project=args.project,
+        method=str(args.method or (imported_source or {}).get("method", "rsync")),
+    )
 
 
 if __name__ == "__main__":

@@ -361,6 +361,19 @@
 - [x] **Step 3: Load project metadata on page load and via refresh.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 24: CLI Uses Imported Project Config Defaults
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/cli.py`
+- Modify: `tests/test_cli.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing CLI tests for `index` and `sync` reusing imported project config values.**
+- [x] **Step 2: Make `index --log-root` optional when the project exists in SQLite.**
+- [x] **Step 3: Make `sync` host/user/remote/cache args optional when a matching remote source exists in SQLite.**
+- [x] **Step 4: Preserve explicit CLI args as overrides for imported config values.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

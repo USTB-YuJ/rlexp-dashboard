@@ -8,6 +8,7 @@ from pathlib import Path
 from rl_exp_dashboard.cli import main
 from rl_exp_dashboard.models import MetricSummary
 from rl_exp_dashboard.storage import DashboardStore
+from rl_exp_dashboard.sync import RemoteSource
 
 
 class CliTests(unittest.TestCase):
@@ -91,6 +92,34 @@ class CliTests(unittest.TestCase):
         self.assertEqual(metrics[0]["tag"], "Train/mean_reward")
         self.assertEqual(metrics[0]["last_value"], 3.0)
 
+    def test_index_command_can_use_imported_project_cache_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            log_root = tmp_path / "cache"
+            run_dir = log_root / "group" / "run-from-config"
+            run_dir.mkdir(parents=True)
+            (run_dir / "model_20.pt").write_bytes(b"model")
+            db_path = tmp_path / "dashboard.sqlite3"
+            store = DashboardStore(db_path)
+            store.initialize()
+            store.upsert_project("unitree_rl_mjlab", log_root)
+
+            with redirect_stdout(StringIO()):
+                exit_code = main(
+                    [
+                        "index",
+                        "--project",
+                        "unitree_rl_mjlab",
+                        "--db",
+                        str(db_path),
+                    ]
+                )
+
+            runs = store.list_runs("unitree_rl_mjlab")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(runs[0]["run_id"], "group/run-from-config")
+
     def test_index_command_persists_inferred_lineage(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -170,6 +199,47 @@ class CliTests(unittest.TestCase):
         self.assertEqual(sources[0]["name"], "x-server")
         self.assertEqual(status["status"], "dry-run")
         self.assertIn("--dry-run", status["command"])
+
+    def test_sync_dry_run_can_use_imported_remote_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            db_path = tmp_path / "dashboard.sqlite3"
+            cache_root = tmp_path / "cache"
+            store = DashboardStore(db_path)
+            store.initialize()
+            store.upsert_project("unitree_rl_mjlab", cache_root)
+            store.upsert_remote_source(
+                RemoteSource(
+                    name="x-server",
+                    host="example.com",
+                    user="eai",
+                    port=12188,
+                    remote_log_root="/remote/logs/rsl_rl",
+                    project="unitree_rl_mjlab",
+                    method="rsync",
+                )
+            )
+            output = StringIO()
+
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "sync",
+                        "--project",
+                        "unitree_rl_mjlab",
+                        "--source-name",
+                        "x-server",
+                        "--db",
+                        str(db_path),
+                        "--dry-run",
+                    ]
+                )
+
+            status = store.latest_sync_status("x-server", "unitree_rl_mjlab")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("eai@example.com:/remote/logs/rsl_rl/", output.getvalue())
+        self.assertEqual(status["local_path"], str(cache_root / "x-server" / "unitree_rl_mjlab" / "logs" / "rsl_rl"))
 
     def test_sync_command_executes_non_dry_run_with_injected_runner(self):
         with tempfile.TemporaryDirectory() as tmp:
