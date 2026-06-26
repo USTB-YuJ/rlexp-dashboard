@@ -147,6 +147,32 @@ class LocalRunIndexerTests(unittest.TestCase):
         self.assertEqual(runs["group/child"].parent_run_id, "group/baseline")
         self.assertEqual(runs["group/child"].parent_checkpoint, "model_100.pt")
 
+    def test_discover_runs_extracts_explicit_git_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_dir = root / "group" / "run-with-git"
+            params_dir = run_dir / "params"
+            params_dir.mkdir(parents=True)
+            (params_dir / "git.yaml").write_text(
+                "\n".join(
+                    [
+                        "git:",
+                        "  commit: abc123",
+                        "  branch: rl-dashboard",
+                        "  dirty: true",
+                        "  diff: changed rewards",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            run = LocalRunIndexer(root).discover_runs()[0]
+
+        self.assertEqual(run.git_metadata["commit"], "abc123")
+        self.assertEqual(run.git_metadata["branch"], "rl-dashboard")
+        self.assertEqual(run.git_metadata["dirty"], True)
+        self.assertEqual(run.git_metadata["diff"], "changed rewards")
+
 
 if __name__ == "__main__":
     unittest.main()

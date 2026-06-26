@@ -15,6 +15,7 @@ _ARTIFACT_SUFFIXES = {".onnx", ".jit", ".pt2"}
 _PARAM_SUFFIXES = {".yaml", ".yml", ".json"}
 _PARENT_RUN_KEYS = {"load_run", "resume_run", "parent_run", "parent_run_id"}
 _PARENT_CHECKPOINT_KEYS = {"load_checkpoint", "resume_checkpoint", "parent_checkpoint"}
+_GIT_CONTAINER_KEYS = {"git", "git_info", "git_metadata"}
 
 
 class LocalRunIndexer:
@@ -60,6 +61,7 @@ class LocalRunIndexer:
         videos = self._find_files_by_suffix(run_dir, _VIDEO_SUFFIXES)
         artifacts = self._find_files_by_suffix(run_dir, _ARTIFACT_SUFFIXES)
         parent_run_id, parent_checkpoint = _infer_parent(params, group)
+        git_metadata = _extract_git_metadata(params)
 
         return RunRecord(
             run_id=run_id,
@@ -68,6 +70,7 @@ class LocalRunIndexer:
             path=run_dir,
             modified_time=run_dir.stat().st_mtime,
             params=params,
+            git_metadata=git_metadata,
             param_files=param_files,
             event_files=event_files,
             checkpoints=checkpoints,
@@ -180,3 +183,39 @@ def _normalize_optional_string(value: Any) -> str | None:
     if not text or text.lower() in {"none", "null"}:
         return None
     return text
+
+
+def _extract_git_metadata(params: Dict[str, Any]) -> Dict[str, Any]:
+    git = _find_git_mapping(params)
+    if not git:
+        return {}
+    metadata: Dict[str, Any] = {}
+    commit = git.get("commit") or git.get("sha") or git.get("hash")
+    if commit is not None:
+        metadata["commit"] = str(commit)
+    branch = git.get("branch")
+    if branch is not None:
+        metadata["branch"] = str(branch)
+    if "dirty" in git:
+        metadata["dirty"] = git["dirty"]
+    diff = git.get("diff") or git.get("dirty_diff")
+    if diff is not None:
+        metadata["diff"] = str(diff)
+    return metadata
+
+
+def _find_git_mapping(value: Any) -> Dict[str, Any] | None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if str(key).lower() in _GIT_CONTAINER_KEYS and isinstance(child, dict):
+                return {str(child_key): child_value for child_key, child_value in child.items()}
+        for child in value.values():
+            found = _find_git_mapping(child)
+            if found is not None:
+                return found
+    elif isinstance(value, list):
+        for child in value:
+            found = _find_git_mapping(child)
+            if found is not None:
+                return found
+    return None

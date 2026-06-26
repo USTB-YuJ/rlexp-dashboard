@@ -344,6 +344,9 @@
             ${field('Latest Checkpoint', run.latest_checkpoint || '')}
           </div>
 
+          <h3 class="subhead">Git Metadata</h3>
+          ${gitPanel(run.git || {})}
+
           <h3 class="subhead">Manual Observation</h3>
           ${observationPanel(run.run_id, payload.observation)}
 
@@ -446,6 +449,18 @@
           <div class="field">
             <div class="label">${escapeHtml(label)}</div>
             <div class="value">${escapeHtml(String(value || ''))}</div>
+          </div>
+        `;
+      }
+
+      function gitPanel(git) {
+        if (!git || Object.keys(git).length === 0) return `<div class="empty">No git metadata indexed for this run.</div>`;
+        return `
+          <div class="grid">
+            ${field('Commit', git.commit || '')}
+            ${field('Branch', git.branch || '')}
+            ${field('Dirty', git.dirty === undefined ? '' : String(git.dirty))}
+            ${field('Diff', git.diff || '')}
           </div>
         `;
       }

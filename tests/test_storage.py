@@ -44,6 +44,11 @@ class DashboardStoreTests(unittest.TestCase):
                     path=run_path,
                     modified_time=2.0,
                     params={"agent": {"algorithm": {"entropy_coef": 0.005}}},
+                    git_metadata={
+                        "commit": "abc123",
+                        "branch": "rl-dashboard",
+                        "dirty": True,
+                    },
                     checkpoints=[
                         CheckpointRecord(
                             path=checkpoint_path,
@@ -99,6 +104,9 @@ class DashboardStoreTests(unittest.TestCase):
 
         self.assertEqual(child["latest_checkpoint"], "model_100.pt")
         self.assertEqual(child["params"]["agent"]["algorithm"]["entropy_coef"], 0.005)
+        self.assertEqual(child["git"]["commit"], "abc123")
+        self.assertEqual(child["git"]["branch"], "rl-dashboard")
+        self.assertEqual(child["git"]["dirty"], True)
         self.assertEqual(checkpoints[0]["iteration"], 100)
         self.assertEqual(checkpoints[0]["is_latest"], True)
         self.assertEqual(metrics[0]["tag"], "Train/mean_reward")

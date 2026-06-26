@@ -15,6 +15,8 @@ class StaticDashboardTests(unittest.TestCase):
         self.assertIn("id=\"metric-chart\"", html)
         self.assertIn("/api/metric-series", html)
         self.assertIn("renderMetricChart", html)
+        self.assertIn("Git Metadata", html)
+        self.assertIn("gitPanel", html)
         self.assertIn("Checkpoints", html)
         self.assertIn("Videos", html)
         self.assertIn("Artifacts", html)

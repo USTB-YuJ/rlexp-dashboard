@@ -240,6 +240,23 @@
 - [x] **Step 3: Persist inferred lineage edges during CLI indexing.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 15: Git Metadata Ingestion
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/models.py`
+- Modify: `src/rl_exp_dashboard/indexer.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_indexer.py`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing tests for extracting explicit git metadata, persisting it with runs, and showing it in the bundled dashboard.**
+- [x] **Step 2: Add `RunRecord.git_metadata` and conservative extraction from `git`-style params.**
+- [x] **Step 3: Persist `git_json` on runs with a simple SQLite migration for existing databases.**
+- [x] **Step 4: Render a Git Metadata panel in run detail.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

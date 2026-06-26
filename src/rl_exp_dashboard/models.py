@@ -51,6 +51,7 @@ class RunRecord:
     path: Path
     modified_time: float
     params: Dict[str, Any] = field(default_factory=dict)
+    git_metadata: Dict[str, Any] = field(default_factory=dict)
     param_files: List[Path] = field(default_factory=list)
     event_files: List[Path] = field(default_factory=list)
     checkpoints: List[CheckpointRecord] = field(default_factory=list)

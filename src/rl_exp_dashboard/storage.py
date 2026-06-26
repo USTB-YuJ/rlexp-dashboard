@@ -54,6 +54,7 @@ class DashboardStore:
                     path text not null,
                     modified_time real not null,
                     params_json text not null,
+                    git_json text not null default '{}',
                     latest_checkpoint text,
                     parent_run_id text,
                     parent_checkpoint text
@@ -140,6 +141,7 @@ class DashboardStore:
                 );
                 """
             )
+            _ensure_column(conn, "runs", "git_json", "text not null default '{}'")
 
     def upsert_project(self, name: str, local_cache_root: Path) -> None:
         with self._connect() as conn:
@@ -258,9 +260,9 @@ class DashboardStore:
                 """
                 insert into runs (
                     run_id, project_name, name, run_group, path, modified_time, params_json,
-                    latest_checkpoint, parent_run_id, parent_checkpoint
+                    git_json, latest_checkpoint, parent_run_id, parent_checkpoint
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(run_id) do update set
                     project_name=excluded.project_name,
                     name=excluded.name,
@@ -268,6 +270,7 @@ class DashboardStore:
                     path=excluded.path,
                     modified_time=excluded.modified_time,
                     params_json=excluded.params_json,
+                    git_json=excluded.git_json,
                     latest_checkpoint=excluded.latest_checkpoint,
                     parent_run_id=excluded.parent_run_id,
                     parent_checkpoint=excluded.parent_checkpoint
@@ -280,6 +283,7 @@ class DashboardStore:
                     str(run.path),
                     run.modified_time,
                     json.dumps(run.params, sort_keys=True),
+                    json.dumps(run.git_metadata, sort_keys=True),
                     latest_checkpoint,
                     run.parent_run_id,
                     run.parent_checkpoint,
@@ -663,6 +667,7 @@ class DashboardStore:
             "path": row["path"],
             "modified_time": row["modified_time"],
             "params": json.loads(row["params_json"]),
+            "git": json.loads(row["git_json"]),
             "latest_checkpoint": row["latest_checkpoint"],
             "parent_run_id": row["parent_run_id"],
             "parent_checkpoint": row["parent_checkpoint"],
@@ -673,6 +678,12 @@ def _series_step(points: List[Dict[str, Any]], index: int) -> Optional[int]:
     if not points:
         return None
     return int(points[index]["step"])
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    existing = {row["name"] for row in conn.execute(f"pragma table_info({table})")}
+    if column not in existing:
+        conn.execute(f"alter table {table} add column {column} {definition}")
 
 
 def _run_artifacts(run: RunRecord) -> List[Dict[str, Any]]:
