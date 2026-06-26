@@ -119,6 +119,7 @@ SQLite stores:
 - Projects.
 - Remote hosts.
 - Run metadata.
+- Run lineage edges.
 - Parsed params.
 - Metric summaries.
 - Checkpoints.
@@ -184,6 +185,8 @@ Indexed run fields:
 - Host/source.
 - Git commit and branch if available.
 - Dirty diff snapshot if available.
+- Parent run if known.
+- Parent checkpoint if known.
 - Number of iterations.
 - Latest checkpoint.
 - Best checkpoint candidates.
@@ -194,7 +197,43 @@ Indexed run fields:
 - User tags.
 - Human run summary.
 
-### 6.4 Checkpoint Review
+### 6.4 Run Lineage
+
+Run lineage records how experiments are connected. This is important because robot RL experiments often form chains:
+
+```text
+baseline run
+  -> lower entropy run
+    -> foothold patch head run
+      -> reward tuning run
+```
+
+Lineage fields:
+
+- Child run.
+- Parent run.
+- Parent checkpoint when training was resumed from a model file.
+- Relationship type: `resume`, `finetune`, `ablation`, `rerun`, `manual-link`.
+- Main intended change.
+- Automatically detected config diff against the parent.
+- Human note explaining why this child run was created.
+
+The dashboard should infer lineage when possible:
+
+- If params contain resume/load-run metadata, use it.
+- If a run directory or command includes a checkpoint path, parse it.
+- If git metadata and timestamps suggest a likely parent, show it as a suggestion, not as a confirmed link.
+- Always allow manual correction.
+
+Lineage should make it possible to answer:
+
+- Which run did this one come from?
+- Which checkpoint was used as the parent?
+- What changed from parent to child?
+- Did that change improve or hurt the result?
+- Which branch of experiments should be continued or abandoned?
+
+### 6.5 Checkpoint Review
 
 Some behaviors can only be judged in play. The dashboard should support checkpoint-level observations.
 
@@ -211,7 +250,7 @@ Fields:
 
 This avoids losing details such as "model_11300.pt walks well on rough terrain but sits on stairs occasionally".
 
-### 6.5 Manual Observation
+### 6.6 Manual Observation
 
 Manual observation exists at two levels:
 
@@ -362,6 +401,7 @@ Columns:
 
 - Run name/time.
 - Task.
+- Parent run.
 - Git commit/branch.
 - Latest checkpoint.
 - Last reward.
@@ -384,6 +424,8 @@ Filters:
 - Has notes.
 - Has video.
 - Has reviewed checkpoint.
+- Has parent.
+- Has children.
 - Git commit.
 
 ### 8.3 Run Detail
@@ -391,6 +433,7 @@ Filters:
 Sections:
 
 - Run summary.
+- Lineage summary.
 - Human notes.
 - Key metrics.
 - Reward terms.
@@ -402,6 +445,14 @@ Sections:
 - Git metadata.
 
 This page should answer: "What happened in this run?"
+
+The lineage summary should show:
+
+- Parent run and parent checkpoint if known.
+- Direct child runs.
+- The main config changes from parent to current run.
+- Human note describing the experiment intent.
+- A quick verdict comparing current run against parent.
 
 ### 8.4 Compare Runs
 
@@ -416,6 +467,7 @@ Panels:
 - Observation/network diff.
 - Curriculum/termination diff.
 - Human verdict comparison.
+- Parent-child improvement summary when comparing lineage-connected runs.
 
 The config diff should be structured rather than only text-based. For example:
 
@@ -444,7 +496,22 @@ Each entry shows:
 
 This is useful for reconstructing the story of an experiment series.
 
-### 8.6 Checkpoint Review
+### 8.6 Lineage Graph
+
+The lineage graph shows experiment ancestry.
+
+It should support:
+
+- Nodes as runs.
+- Edges as parent-child relationships.
+- Edge labels such as `resume`, `finetune`, `ablation`, or `rerun`.
+- Node color by human verdict or key metric.
+- Click a node to open run detail.
+- Click an edge to show parent-child config diff and result delta.
+
+The first implementation can be a simple tree/list view if a graph library would slow down V0. The data model should still support graph rendering later.
+
+### 8.7 Checkpoint Review
 
 For each run:
 
@@ -482,8 +549,12 @@ The UI should support:
 - Filter by category prefix, such as `rewards`, `algorithm`, `observations`.
 - Mark important diffs.
 - Collapse noisy paths.
+- Compare against an explicit parent run when lineage is available.
+- Show result delta next to important config deltas, such as reward, episode length, success rate, and termination changes.
 
 Config values should preserve source file and path for traceability.
+
+When a run has a parent, the default diff baseline should be the parent run. Manual compare should still allow any two runs to be selected.
 
 ## 10. Result Summary Design
 
@@ -608,6 +679,8 @@ Version 0 should include:
 - SQLite cache.
 - Run table.
 - Run detail page.
+- Parent run and parent checkpoint metadata.
+- Manual run lineage editing.
 - Two-run config diff.
 - Run-level notes and tags.
 - Checkpoint-level notes and tags.
@@ -632,13 +705,15 @@ The minimum useful workflow should be:
 6. Dashboard lists discovered runs.
 7. User opens a run and sees:
    - Latest checkpoint.
+   - Parent run and child runs when known.
    - Main metric summaries.
    - Reward weights.
    - Termination summaries.
    - Config files.
 8. User selects two runs and opens `Compare`.
 9. Dashboard shows config diffs and metric comparison.
-10. User writes run-level notes and checkpoint-level play observations.
+10. User links a run to its parent if automatic inference missed it.
+11. User writes run-level notes and checkpoint-level play observations.
 
 This flow should work without writing a custom parser. Project presets can improve naming and metric defaults, but the generic TensorBoard/YAML parser should still provide a useful baseline.
 
@@ -662,7 +737,7 @@ Useful later features:
 - "What changed before this improvement?" assistant.
 - Git diff ingestion and display.
 - Reward-term contribution analysis.
-- Experiment lineage graph.
+- Rich lineage analytics across experiment branches.
 - Model registry export status.
 - Deployment checklist.
 - Team comments and review workflow.
@@ -686,6 +761,10 @@ Risk: TensorBoard event parsing is slow for large logs.
 
 Mitigation: Cache summaries in SQLite and only re-parse files whose size or modified time changed.
 
+Risk: Automatic lineage inference links runs incorrectly.
+
+Mitigation: Treat inferred lineage as suggested until confirmed when confidence is low. Always allow manual relinking and store whether a lineage edge was inferred or user-confirmed.
+
 Risk: Dashboard becomes too project-specific.
 
 Mitigation: Keep `unitree_rl_mjlab` as a preset, not the core architecture.
@@ -708,11 +787,13 @@ Milestone 2: Basic dashboard
 - Run detail.
 - Manual notes.
 - Checkpoint notes.
+- Manual parent-child run linking.
 
 Milestone 3: Config diff and comparison
 
 - Flatten YAML configs.
 - Two-run diff.
+- Parent-child diff.
 - Metric comparison.
 
 Milestone 4: Remote sync
@@ -735,6 +816,7 @@ Confirmed decisions:
 - The product should be a local Web Dashboard.
 - It should use local cache plus remote sync.
 - Human observations should exist at both run level and checkpoint level.
+- Run lineage should be a core data model, including parent run and parent checkpoint relationships.
 - The implementation should be open-source friendly.
 - The preferred architecture is FastAPI backend plus React/Vite frontend.
 - Normal users should be able to install and start it with a Python package command.
