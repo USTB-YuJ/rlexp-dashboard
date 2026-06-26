@@ -257,6 +257,19 @@
 - [x] **Step 4: Render a Git Metadata panel in run detail.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 16: Safe Artifact Preview Serving
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+
+- [x] **Step 1: Write failing tests for whitelisted artifact file resolution and dashboard preview/link hooks.**
+- [x] **Step 2: Add an API helper and `/api/artifact-file` route that only serves files already indexed for the requested run.**
+- [x] **Step 3: Add video preview embeds and open links for indexed artifacts in the bundled dashboard.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

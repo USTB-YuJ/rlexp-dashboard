@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from rl_exp_dashboard.api import (
+    artifact_file_path,
     compare_runs_payload,
     metric_series_payload,
     metric_summaries_payload,
@@ -119,6 +120,20 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["checkpoint_reviews"][0]["checkpoint"], "model_20.pt")
         self.assertEqual([artifact["kind"] for artifact in payload["artifacts"]], ["artifact", "video"])
         self.assertEqual([Path(artifact["path"]).name for artifact in payload["artifacts"]], ["policy.onnx", "model_20.mp4"])
+
+    def test_artifact_file_path_only_allows_indexed_run_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+            allowed = Path(tmp) / "child" / "videos" / "play" / "model_20.mp4"
+            denied = Path(tmp) / "child" / "secret.txt"
+            denied.write_text("secret", encoding="utf-8")
+
+            resolved = artifact_file_path(store, "group/child", str(allowed))
+
+            with self.assertRaises(PermissionError):
+                artifact_file_path(store, "group/child", str(denied))
+
+        self.assertEqual(resolved, allowed)
 
     def test_save_observation_and_checkpoint_review_payloads_persist_notes(self):
         with tempfile.TemporaryDirectory() as tmp:

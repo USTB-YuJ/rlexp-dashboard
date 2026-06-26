@@ -31,6 +31,17 @@ def run_detail_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
     }
 
 
+def artifact_file_path(store: DashboardStore, run_id: str, path: str) -> Path:
+    requested = Path(path).expanduser().resolve(strict=False)
+    for artifact in store.list_run_artifacts(run_id):
+        candidate = Path(artifact["path"]).expanduser()
+        if candidate.resolve(strict=False) == requested:
+            if not candidate.is_file():
+                raise FileNotFoundError(str(candidate))
+            return candidate
+    raise PermissionError(f"Artifact is not indexed for run: {run_id}")
+
+
 def compare_runs_payload(store: DashboardStore, before_run_id: str, after_run_id: str) -> Dict[str, Any]:
     before = store.get_run(before_run_id)
     after = store.get_run(after_run_id)
@@ -114,7 +125,7 @@ def _metric_deltas(before_metrics: list[Dict[str, Any]], after_metrics: list[Dic
 
 def create_app(db_path: Path):
     try:
-        from fastapi import FastAPI
+        from fastapi import FastAPI, HTTPException
         from fastapi.responses import FileResponse
         from fastapi.staticfiles import StaticFiles
     except ModuleNotFoundError as exc:
@@ -155,6 +166,15 @@ def create_app(db_path: Path):
     @app.get("/api/metric-series")
     def list_metric_series(run_id: str, tag: str | None = None):
         return metric_series_payload(store, run_id, tag=tag)
+
+    @app.get("/api/artifact-file")
+    def get_artifact_file(run_id: str, path: str):
+        try:
+            return FileResponse(artifact_file_path(store, run_id, path))
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/api/runs/{run_id:path}")
     def get_run(run_id: str):

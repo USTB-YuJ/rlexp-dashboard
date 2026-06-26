@@ -189,6 +189,13 @@
         gap: 10px;
         margin-top: 8px;
       }
+      .video-preview {
+        width: 100%;
+        max-height: 260px;
+        margin: 8px 0 12px;
+        background: #000;
+        border-radius: 4px;
+      }
       @media (max-width: 920px) {
         main {
           grid-template-columns: 1fr;
@@ -360,10 +367,10 @@
           ${checkpointTable(payload.checkpoints || [])}
 
           <h3 class="subhead">Videos</h3>
-          ${videoTable(payload.artifacts || [])}
+          ${videoTable(run.run_id, payload.artifacts || [])}
 
           <h3 class="subhead">Artifacts</h3>
-          ${artifactTable(payload.artifacts || [])}
+          ${artifactTable(run.run_id, payload.artifacts || [])}
 
           <h3 class="subhead">Checkpoint Reviews</h3>
           ${checkpointReviewPanel(run.run_id, payload.checkpoints || [], payload.checkpoint_reviews || [])}
@@ -571,22 +578,31 @@
         `;
       }
 
-      function videoTable(artifacts) {
+      function videoTable(runId, artifacts) {
         const videos = (artifacts || []).filter((artifact) => artifact.kind === 'video');
         if (videos.length === 0) return `<div class="empty">No videos indexed for this run.</div>`;
-        return artifactRows(videos);
+        return `
+          ${videos
+            .map(
+              (artifact) => `
+                <video class="video-preview" controls preload="metadata" src="${escapeHtml(artifactFileUrl(runId, artifact))}"></video>
+              `,
+            )
+            .join('')}
+          ${artifactRows(runId, videos)}
+        `;
       }
 
-      function artifactTable(artifacts) {
+      function artifactTable(runId, artifacts) {
         const exportedArtifacts = (artifacts || []).filter((artifact) => artifact.kind !== 'video');
         if (exportedArtifacts.length === 0) return `<div class="empty">No exported artifacts indexed for this run.</div>`;
-        return artifactRows(exportedArtifacts);
+        return artifactRows(runId, exportedArtifacts);
       }
 
-      function artifactRows(artifacts) {
+      function artifactRows(runId, artifacts) {
         return `
           <table>
-            <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Path</th></tr></thead>
+            <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Path</th><th>Action</th></tr></thead>
             <tbody>
               ${artifacts
                 .map(
@@ -596,6 +612,7 @@
                       <td>${escapeHtml(artifact.suffix || artifact.kind)}</td>
                       <td>${formatBytes(artifact.size_bytes)}</td>
                       <td>${escapeHtml(artifact.path)}</td>
+                      <td><a href="${escapeHtml(artifactFileUrl(runId, artifact))}" target="_blank" rel="noreferrer">Open</a></td>
                     </tr>
                   `,
                 )
@@ -603,6 +620,10 @@
             </tbody>
           </table>
         `;
+      }
+
+      function artifactFileUrl(runId, artifact) {
+        return `/api/artifact-file?run_id=${encodeURIComponent(runId)}&path=${encodeURIComponent(artifact.path)}`;
       }
 
       function observationPanel(runId, observation) {
