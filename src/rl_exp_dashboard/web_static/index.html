@@ -779,7 +779,7 @@
           edges.length === 0
             ? `<div class="empty">No lineage links recorded.</div>`
             : `<table aria-label="Lineage edges">
-                <thead><tr><th>Parent</th><th>Child</th><th>Type</th><th>Checkpoint</th><th>Change</th><th>Note</th></tr></thead>
+                <thead><tr><th>Parent</th><th>Child</th><th>Type</th><th>State</th><th>Source</th><th>Checkpoint</th><th>Change</th><th>Result</th><th>Note</th></tr></thead>
                 <tbody>
                   ${edges
                     .map(
@@ -788,8 +788,11 @@
                           <td>${escapeHtml(edge.parent_run_id)}</td>
                           <td>${escapeHtml(edge.child_run_id)}</td>
                           <td>${escapeHtml(edge.relationship || '')}</td>
+                          <td>${escapeHtml(edge.confirmation_state || '')}</td>
+                          <td>${escapeHtml(edge.confidence_source || '')}</td>
                           <td>${escapeHtml(edge.parent_checkpoint || '')}</td>
                           <td>${escapeHtml(edge.intended_change || '')}</td>
+                          <td>${escapeHtml(edge.result_summary || '')}</td>
                           <td>${escapeHtml(edge.note || '')}</td>
                         </tr>
                       `,
@@ -845,9 +848,33 @@
                 <input name="parent_checkpoint" placeholder="model_1000.pt" />
               </label>
             </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Confirmation state</div>
+                <select name="confirmation_state">
+                  ${option('confirmed', 'confirmed')}
+                  ${option('suggested')}
+                  ${option('rejected')}
+                </select>
+              </label>
+              <label>
+                <div class="label">Confidence source</div>
+                <select name="confidence_source">
+                  ${option('manual', 'manual')}
+                  ${option('params')}
+                  ${option('checkpoint-path')}
+                  ${option('git-timestamp-suggestion')}
+                  ${option('name-pattern')}
+                </select>
+              </label>
+            </div>
             <label>
               <div class="label">Intended change</div>
               <textarea name="intended_change" placeholder="What changed in the child run?"></textarea>
+            </label>
+            <label>
+              <div class="label">Result summary</div>
+              <textarea name="result_summary" placeholder="What happened compared with the parent?"></textarea>
             </label>
             <label>
               <div class="label">Note</div>
@@ -872,8 +899,11 @@
             relationship: data.get('relationship'),
             parent_checkpoint: data.get('parent_checkpoint'),
             intended_change: data.get('intended_change'),
+            confirmation_state: data.get('confirmation_state'),
+            confidence_source: data.get('confidence_source'),
+            result_summary: data.get('result_summary'),
             note: data.get('note'),
-            confirmed: true,
+            confirmed: data.get('confirmation_state') === 'confirmed',
           });
           await loadLineageOverview();
         });
@@ -1587,21 +1617,22 @@
 
       function lineageTable(parents, children) {
         const rows = [
-          ...parents.map((edge) => ['parent', edge.parent_run_id, edge.relationship, edge.intended_change]),
-          ...children.map((edge) => ['child', edge.child_run_id, edge.relationship, edge.intended_change]),
+          ...parents.map((edge) => ['parent', edge.parent_run_id, edge.relationship, edge.confirmation_state, edge.intended_change]),
+          ...children.map((edge) => ['child', edge.child_run_id, edge.relationship, edge.confirmation_state, edge.intended_change]),
         ];
         if (rows.length === 0) return `<div class="empty">No lineage links recorded.</div>`;
         return `
           <table>
-            <thead><tr><th>Direction</th><th>Run</th><th>Type</th><th>Change</th></tr></thead>
+            <thead><tr><th>Direction</th><th>Run</th><th>Type</th><th>State</th><th>Change</th></tr></thead>
             <tbody>
               ${rows
                 .map(
-                  ([direction, runId, type, change]) => `
+                  ([direction, runId, type, state, change]) => `
                     <tr>
                       <td>${escapeHtml(direction)}</td>
                       <td>${escapeHtml(runId)}</td>
                       <td>${escapeHtml(type)}</td>
+                      <td>${escapeHtml(state || '')}</td>
                       <td>${escapeHtml(change || '')}</td>
                     </tr>
                   `,

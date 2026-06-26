@@ -121,6 +121,10 @@ class DashboardStore:
                     intended_change text not null,
                     note text not null,
                     confirmed integer not null,
+                    confirmation_state text not null default 'confirmed',
+                    confidence_source text not null default 'manual',
+                    result_summary text not null default '',
+                    updated_at real not null default 0,
                     primary key (parent_run_id, child_run_id)
                 );
 
@@ -154,6 +158,17 @@ class DashboardStore:
             _ensure_column(conn, "remote_sources", "include_patterns_json", "text not null default '[]'")
             _ensure_column(conn, "remote_sources", "exclude_patterns_json", "text not null default '[]'")
             _ensure_column(conn, "runs", "git_json", "text not null default '{}'")
+            _ensure_column(conn, "lineage_edges", "confirmation_state", "text not null default 'confirmed'")
+            _ensure_column(conn, "lineage_edges", "confidence_source", "text not null default 'manual'")
+            _ensure_column(conn, "lineage_edges", "result_summary", "text not null default ''")
+            _ensure_column(conn, "lineage_edges", "updated_at", "real not null default 0")
+            conn.execute(
+                """
+                update lineage_edges
+                set confirmation_state = 'suggested'
+                where confirmed = 0 and confirmation_state = 'confirmed'
+                """
+            )
 
     def upsert_project(
         self,
@@ -436,20 +451,27 @@ class DashboardStore:
             )
 
     def upsert_lineage(self, edge: LineageEdge) -> None:
+        confirmation_state = _lineage_confirmation_state(edge)
+        updated_at = time.time()
         with self._connect() as conn:
             conn.execute(
                 """
                 insert into lineage_edges (
                     parent_run_id, child_run_id, relationship, parent_checkpoint,
-                    intended_change, note, confirmed
+                    intended_change, note, confirmed, confirmation_state,
+                    confidence_source, result_summary, updated_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(parent_run_id, child_run_id) do update set
                     relationship=excluded.relationship,
                     parent_checkpoint=excluded.parent_checkpoint,
                     intended_change=excluded.intended_change,
                     note=excluded.note,
-                    confirmed=excluded.confirmed
+                    confirmed=excluded.confirmed,
+                    confirmation_state=excluded.confirmation_state,
+                    confidence_source=excluded.confidence_source,
+                    result_summary=excluded.result_summary,
+                    updated_at=excluded.updated_at
                 """,
                 (
                     edge.parent_run_id,
@@ -458,7 +480,11 @@ class DashboardStore:
                     edge.parent_checkpoint,
                     edge.intended_change,
                     edge.note,
-                    int(edge.confirmed),
+                    int(confirmation_state == "confirmed"),
+                    confirmation_state,
+                    edge.confidence_source,
+                    edge.result_summary,
+                    updated_at,
                 ),
             )
 
@@ -740,7 +766,17 @@ class DashboardStore:
             "intended_change": row["intended_change"],
             "note": row["note"],
             "confirmed": bool(row["confirmed"]),
+            "confirmation_state": row["confirmation_state"],
+            "confidence_source": row["confidence_source"],
+            "result_summary": row["result_summary"],
+            "updated_at": row["updated_at"],
         }
+
+
+def _lineage_confirmation_state(edge: LineageEdge) -> str:
+    if edge.confirmation_state:
+        return edge.confirmation_state
+    return "confirmed" if edge.confirmed else "suggested"
 
 
 def _series_step(points: List[Dict[str, Any]], index: int) -> Optional[int]:

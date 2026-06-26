@@ -91,6 +91,9 @@ class DashboardStoreTests(unittest.TestCase):
                     parent_checkpoint="model_50.pt",
                     intended_change="lower entropy",
                     note="Test child lineage.",
+                    confirmation_state="suggested",
+                    confidence_source="name-pattern",
+                    result_summary="Needs human confirmation.",
                 )
             )
 
@@ -124,6 +127,11 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(lineage[0]["parent_run_id"], "group/parent")
         self.assertEqual(lineage[0]["relationship"], "finetune")
         self.assertEqual(lineage[0]["intended_change"], "lower entropy")
+        self.assertEqual(lineage[0]["confirmation_state"], "suggested")
+        self.assertEqual(lineage[0]["confidence_source"], "name-pattern")
+        self.assertEqual(lineage[0]["result_summary"], "Needs human confirmation.")
+        self.assertEqual(lineage[0]["confirmed"], False)
+        self.assertGreaterEqual(lineage[0]["updated_at"], 0.0)
 
     def test_store_lists_lineage_edges_scoped_by_project(self):
         with tempfile.TemporaryDirectory() as tmp:

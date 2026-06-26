@@ -548,6 +548,24 @@
 - [x] **Step 3: Render a Sync Remote Source form with dry-run default and refresh sync status.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 37: Lineage Edge State Metadata
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/models.py`
+- Modify: `src/rl_exp_dashboard/storage.py`
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_storage.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for lineage confirmation state, confidence source, result summary, and dashboard form hooks.**
+- [x] **Step 2: Extend `LineageEdge`, SQLite schema migration, and lineage row serialization.**
+- [x] **Step 3: Persist lineage metadata through `save_lineage_edge_payload()` and automatic resume lineage.**
+- [x] **Step 4: Render lineage state/source/result fields in the bundled dashboard.**
+- [x] **Step 5: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

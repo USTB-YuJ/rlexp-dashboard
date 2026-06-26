@@ -72,3 +72,6 @@ class LineageEdge:
     intended_change: str = ""
     note: str = ""
     confirmed: bool = True
+    confirmation_state: Optional[str] = None
+    confidence_source: str = "manual"
+    result_summary: str = ""

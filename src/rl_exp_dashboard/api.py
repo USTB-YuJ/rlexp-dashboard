@@ -69,6 +69,8 @@ def index_project_payload(
                     relationship="resume",
                     parent_checkpoint=run.parent_checkpoint,
                     intended_change="Inferred from indexed resume/load_run parameters.",
+                    confirmation_state="confirmed",
+                    confidence_source="params",
                 )
             )
 
@@ -198,7 +200,7 @@ def _parent_compare_summary(
     run: Dict[str, Any],
     parent_lineage: list[Dict[str, Any]],
 ) -> Dict[str, Any] | None:
-    parent_edge = parent_lineage[0] if parent_lineage else {}
+    parent_edge = _confirmed_parent_edge(parent_lineage) or {}
     parent_run_id = parent_edge.get("parent_run_id") or run.get("parent_run_id")
     if not parent_run_id or store.get_run(parent_run_id) is None:
         return None
@@ -371,6 +373,9 @@ def save_lineage_edge_payload(store: DashboardStore, payload: Dict[str, Any]) ->
         intended_change=str(payload.get("intended_change", "")),
         note=str(payload.get("note", "")),
         confirmed=_payload_bool(payload.get("confirmed", True)),
+        confirmation_state=_lineage_confirmation_state(payload),
+        confidence_source=str(payload.get("confidence_source") or "manual"),
+        result_summary=str(payload.get("result_summary", "")),
     )
     store.upsert_lineage(edge)
     saved_edge = next(
@@ -427,6 +432,15 @@ def _payload_list(value: Any) -> list[str]:
     return [item.strip() for item in normalized.split(",") if item.strip()]
 
 
+def _lineage_confirmation_state(payload: Dict[str, Any]) -> str:
+    state = str(payload.get("confirmation_state") or "").strip().lower()
+    if not state:
+        return "confirmed" if _payload_bool(payload.get("confirmed", True)) else "suggested"
+    if state not in {"confirmed", "suggested", "rejected"}:
+        raise ValueError(f"Unsupported lineage confirmation state: {state}")
+    return state
+
+
 def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str, Any] | None) -> Dict[str, Any]:
     run_id = run["run_id"]
     artifacts = store.list_run_artifacts(run_id)
@@ -460,7 +474,7 @@ def _timeline_entry(store: DashboardStore, run: Dict[str, Any], project: Dict[st
     run_id = run["run_id"]
     observation = store.get_run_observation(run_id) or {}
     parent_lineage = store.list_lineage(run_id)
-    parent_edge = parent_lineage[0] if parent_lineage else {}
+    parent_edge = _confirmed_parent_edge(parent_lineage) or {}
     return {
         "run_id": run_id,
         "project_name": run["project_name"],
@@ -490,6 +504,17 @@ def _run_table_metrics(metrics: list[Dict[str, Any]], preferred_tags: list[str])
     if not selected and metrics:
         selected = [metrics[0]]
     return {metric["tag"]: _compact_metric_summary(metric) for metric in selected}
+
+
+def _confirmed_parent_edge(parent_lineage: list[Dict[str, Any]]) -> Dict[str, Any] | None:
+    return next(
+        (
+            edge
+            for edge in parent_lineage
+            if edge.get("confirmation_state", "confirmed") == "confirmed"
+        ),
+        None,
+    )
 
 
 def _compact_metric_summary(metric: Dict[str, Any]) -> Dict[str, Any]:
@@ -583,7 +608,10 @@ def create_app(db_path: Path):
 
     @app.post("/api/lineage-edge")
     async def save_lineage_edge(payload: dict):
-        return save_lineage_edge_payload(store, payload)
+        try:
+            return save_lineage_edge_payload(store, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post("/api/run-observation")
     async def save_run_observation(payload: dict):

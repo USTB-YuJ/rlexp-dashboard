@@ -358,13 +358,20 @@ class ApiPayloadTests(unittest.TestCase):
                     "parent_checkpoint": "model_10.pt",
                     "intended_change": "Corrected lineage after review.",
                     "note": "Linked by user.",
+                    "confirmation_state": "confirmed",
+                    "confidence_source": "manual",
+                    "result_summary": "Better target success but rough gait.",
                 },
             )
             overview = lineage_overview_payload(store, "project")
 
         self.assertEqual(saved["edge"]["relationship"], "manual-link")
         self.assertEqual(saved["edge"]["confirmed"], True)
+        self.assertEqual(saved["edge"]["confirmation_state"], "confirmed")
+        self.assertEqual(saved["edge"]["confidence_source"], "manual")
+        self.assertEqual(saved["edge"]["result_summary"], "Better target success but rough gait.")
         self.assertEqual(overview["edges"][0]["note"], "Linked by user.")
+        self.assertEqual(overview["edges"][0]["result_summary"], "Better target success but rough gait.")
 
     def test_remote_sources_payload_includes_latest_sync_status(self):
         with tempfile.TemporaryDirectory() as tmp:
