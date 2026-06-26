@@ -240,6 +240,55 @@ Lineage should make it possible to answer:
 - Did that change improve or hurt the result?
 - Which branch of experiments should be continued or abandoned?
 
+Run lineage should be treated as a first-class experiment story, not just as a display field. In robot RL, the most important comparison is often not chronological order, but "what did I change from the previous meaningful baseline?" A run may be started from a checkpoint, copied from a previous config, or manually recreated after several unrelated experiments. The dashboard should preserve that relationship explicitly.
+
+Recommended lineage state model:
+
+- `confirmed`: backed by high-confidence resume metadata or manually accepted by the user.
+- `suggested`: inferred from weak signals such as nearby timestamps, similar configs, same git commit, or naming conventions.
+- `rejected`: a suggestion that the user dismissed, so the system does not keep proposing it.
+
+Each lineage edge should store:
+
+- Parent run ID.
+- Child run ID.
+- Parent checkpoint, when available.
+- Relationship type.
+- Confidence source: `params`, `checkpoint-path`, `manual`, `git-timestamp-suggestion`, `name-pattern`.
+- Confirmation state.
+- Intended change summary.
+- Optional result summary, such as "reward improved but gait became high-frequency".
+- Created/updated timestamp.
+
+Lineage establishment should happen through several paths:
+
+1. Automatic confirmed edges from explicit training metadata:
+   - `resume: true`
+   - `load_run`
+   - `load_checkpoint`
+   - absolute or relative checkpoint paths saved in params.
+2. Automatic suggested edges from weaker evidence:
+   - same task/group and nearby start time.
+   - child config differs by only a few keys from a recent run.
+   - child run uses the same git commit or the next commit after parent.
+   - run name contains a parent or experiment-series hint.
+3. Manual linking in the dashboard:
+   - pick parent and child.
+   - choose relationship type.
+   - enter parent checkpoint and intended change.
+   - accept/reject suggested links.
+4. Future launch integration:
+   - "Continue from this checkpoint" should pre-fill parent metadata before training starts.
+   - The generated run note should include intended change, expected metric to improve, and risk being tested.
+
+Lineage-aware comparison should become the default analysis mode:
+
+- A child run detail page should compare against its confirmed parent by default.
+- The compare page should highlight config changes grouped by reward, command, terrain, curriculum, network, AMP, estimator, and algorithm.
+- Result deltas should sit next to config deltas, so the user sees both "what changed" and "what happened".
+- If a child has worse metrics but better play behavior, manual notes should make that visible in the same parent-child comparison.
+- If several children share one parent, the dashboard should show a branch comparison table to answer which ablation is worth continuing.
+
 ### 6.5 Checkpoint Review
 
 Some behaviors can only be judged in play. The dashboard should support checkpoint-level observations.
