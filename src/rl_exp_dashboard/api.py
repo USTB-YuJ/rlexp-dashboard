@@ -14,6 +14,13 @@ _DEFAULT_RUN_TABLE_METRICS = (
     "Metrics/mean_reward",
 )
 
+_CONFIG_DIFF_GROUPS = (
+    ("rewards", "Reward Diffs"),
+    ("algorithm", "Algorithm Diffs"),
+    ("observation_network", "Observation / Network Diffs"),
+    ("curriculum_termination", "Curriculum / Termination Diffs"),
+)
+
 
 def runs_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
     projects_by_name = {item["name"]: item for item in store.list_projects()}
@@ -88,11 +95,43 @@ def compare_runs_payload(store: DashboardStore, before_run_id: str, after_run_id
         "before": before,
         "after": after,
         "config_diffs": config_diffs,
+        "config_diff_groups": _config_diff_groups(config_diffs),
         "metric_deltas": _metric_deltas(
             store.list_metric_summaries(before_run_id),
             store.list_metric_summaries(after_run_id),
         ),
     }
+
+
+def _config_diff_groups(config_diffs: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    grouped = {key: {"key": key, "title": title, "diffs": []} for key, title in _CONFIG_DIFF_GROUPS}
+    for diff in config_diffs:
+        group_key = _config_diff_group_key(str(diff.get("path", "")))
+        if group_key is not None:
+            grouped[group_key]["diffs"].append(diff)
+    return [grouped[key] for key, _title in _CONFIG_DIFF_GROUPS]
+
+
+def _config_diff_group_key(path: str) -> str | None:
+    normalized = path.lower()
+    if normalized.startswith(("rewards.", "reward.")) or ".rewards." in normalized:
+        return "rewards"
+    if normalized.startswith(("algorithm.", "agent.algorithm.")) or ".algorithm." in normalized:
+        return "algorithm"
+    if normalized.startswith(("observations.", "observation.", "actor.", "critic.", "policy.")):
+        return "observation_network"
+    if (
+        normalized.startswith(("agent.policy.", "network.", "model."))
+        or ".network." in normalized
+        or ".model." in normalized
+        or "depth_encoder" in normalized
+    ):
+        return "observation_network"
+    if normalized.startswith(("curriculum.", "curriculums.", "termination.", "terminations.")):
+        return "curriculum_termination"
+    if ".curriculum." in normalized or ".termination." in normalized or ".terminations." in normalized:
+        return "curriculum_termination"
+    return None
 
 
 def remote_sources_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:

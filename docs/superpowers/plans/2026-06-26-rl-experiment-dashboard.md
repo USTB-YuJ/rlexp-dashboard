@@ -464,6 +464,20 @@
 - [x] **Step 3: Render flattened dotted param paths and values from `run.params`.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 31: Grouped Compare Config Diffs
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for grouped compare diff payloads and dashboard hooks.**
+- [x] **Step 2: Add backend grouping for reward, algorithm, observation/network, and curriculum/termination diffs.**
+- [x] **Step 3: Render grouped compare diff panels before the full diff table.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

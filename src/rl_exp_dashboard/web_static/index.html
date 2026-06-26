@@ -386,6 +386,12 @@
       const remoteSources = document.getElementById('remote-sources');
       const lineageOverview = document.getElementById('lineage-overview');
       const timelineOverview = document.getElementById('timeline-overview');
+      const defaultConfigDiffGroups = [
+        { key: 'rewards', title: 'Reward Diffs' },
+        { key: 'algorithm', title: 'Algorithm Diffs' },
+        { key: 'observation_network', title: 'Observation / Network Diffs' },
+        { key: 'curriculum_termination', title: 'Curriculum / Termination Diffs' },
+      ];
       let indexedRuns = [];
       document.getElementById('refresh-runs').addEventListener('click', loadRuns);
       document.getElementById('refresh-project-configs').addEventListener('click', loadProjectConfigs);
@@ -893,11 +899,25 @@
 
       function renderCompareResult(payload) {
         compareResult.innerHTML = `
+          <h3 class="subhead">Grouped Config Diffs</h3>
+          ${configDiffGroups(payload.config_diff_groups || [])}
           <h3 class="subhead">Config Diffs</h3>
           ${configDiffTable(payload.config_diffs || [])}
           <h3 class="subhead">Metric Deltas</h3>
           ${metricDeltaTable(payload.metric_deltas || [])}
         `;
+      }
+
+      function configDiffGroups(groups) {
+        const visibleGroups = groups.length > 0 ? groups : defaultConfigDiffGroups.map((group) => ({ ...group, diffs: [] }));
+        return visibleGroups
+          .map(
+            (group) => `
+              <h4 class="subhead">${escapeHtml(group.title)}</h4>
+              ${configDiffTable(group.diffs || [])}
+            `,
+          )
+          .join('');
       }
 
       function configDiffTable(diffs) {

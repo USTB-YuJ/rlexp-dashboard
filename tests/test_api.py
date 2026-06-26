@@ -244,6 +244,56 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(detail["observation"]["tags"], ["good-rough", "bad-stairs"])
         self.assertEqual(detail["checkpoint_reviews"][0]["video_path"], "videos/model_20.mp4")
 
+    def test_compare_runs_payload_groups_config_diffs_by_domain(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = DashboardStore(Path(tmp) / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project("project", Path(tmp) / "cache")
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/baseline",
+                    name="baseline",
+                    group="group",
+                    path=Path(tmp) / "baseline",
+                    modified_time=1.0,
+                    params={
+                        "rewards": {"action_rate_l2": {"weight": -0.0001}},
+                        "agent": {"algorithm": {"entropy_coef": 0.01}},
+                        "observations": {"actor": {"depth": True}},
+                        "curriculum": {"terrain_levels": {"enabled": False}},
+                    },
+                ),
+            )
+            store.upsert_run(
+                "project",
+                RunRecord(
+                    run_id="group/target",
+                    name="target",
+                    group="group",
+                    path=Path(tmp) / "target",
+                    modified_time=2.0,
+                    params={
+                        "rewards": {"action_rate_l2": {"weight": -0.001}},
+                        "agent": {"algorithm": {"entropy_coef": 0.005}},
+                        "observations": {"actor": {"depth": False}},
+                        "curriculum": {"terrain_levels": {"enabled": True}},
+                    },
+                ),
+            )
+
+            payload = compare_runs_payload(store, "group/baseline", "group/target")
+
+        groups = {group["key"]: group for group in payload["config_diff_groups"]}
+        self.assertEqual(groups["rewards"]["title"], "Reward Diffs")
+        self.assertEqual(groups["algorithm"]["title"], "Algorithm Diffs")
+        self.assertEqual(groups["observation_network"]["title"], "Observation / Network Diffs")
+        self.assertEqual(groups["curriculum_termination"]["title"], "Curriculum / Termination Diffs")
+        self.assertEqual(groups["rewards"]["diffs"][0]["path"], "rewards.action_rate_l2.weight")
+        self.assertEqual(groups["algorithm"]["diffs"][0]["path"], "agent.algorithm.entropy_coef")
+        self.assertEqual(groups["observation_network"]["diffs"][0]["path"], "observations.actor.depth")
+        self.assertEqual(groups["curriculum_termination"]["diffs"][0]["path"], "curriculum.terrain_levels.enabled")
+
     def test_compare_runs_payload_returns_config_diff_and_metric_delta(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = self._store_with_parent_and_child(Path(tmp))

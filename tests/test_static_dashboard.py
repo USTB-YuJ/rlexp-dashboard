@@ -84,6 +84,12 @@ class StaticDashboardTests(unittest.TestCase):
         self.assertIn("after_run_id", html)
         self.assertIn("renderCompareResult", html)
         self.assertIn("Config Diffs", html)
+        self.assertIn("Grouped Config Diffs", html)
+        self.assertIn("configDiffGroups", html)
+        self.assertIn("Reward Diffs", html)
+        self.assertIn("Algorithm Diffs", html)
+        self.assertIn("Observation / Network Diffs", html)
+        self.assertIn("Curriculum / Termination Diffs", html)
         self.assertIn("Metric Deltas", html)
 
 
