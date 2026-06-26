@@ -6,6 +6,7 @@ from typing import Any, Dict
 from .config_diff import diff_configs
 from .models import LineageEdge
 from .storage import DashboardStore
+from .sync import RemoteSource
 
 _DEFAULT_RUN_TABLE_METRICS = (
     "Train/mean_reward",
@@ -176,6 +177,28 @@ def remote_sources_payload(store: DashboardStore, project: str | None = None) ->
         source["latest_sync"] = store.latest_sync_status(source["name"], source["project"])
         sources.append(source)
     return {"sources": sources}
+
+
+def save_remote_source_payload(store: DashboardStore, payload: Dict[str, Any]) -> Dict[str, Any]:
+    project = str(payload.get("project") or payload.get("project_name") or "").strip()
+    source = RemoteSource(
+        name=str(payload["name"]).strip(),
+        host=str(payload["host"]).strip(),
+        user=str(payload["user"]).strip(),
+        port=int(payload.get("port") or 22),
+        remote_log_root=str(payload["remote_log_root"]).strip(),
+        project=project,
+        method=str(payload.get("method") or "rsync"),
+        include_patterns=tuple(_payload_list(payload.get("include_patterns"))),
+        exclude_patterns=tuple(_payload_list(payload.get("exclude_patterns"))),
+    )
+    store.upsert_remote_source(source)
+    saved = next(
+        item
+        for item in store.list_remote_sources(project)
+        if item["name"] == source.name and item["project"] == project
+    )
+    return {"source": saved}
 
 
 def projects_payload(store: DashboardStore) -> Dict[str, Any]:
@@ -409,6 +432,10 @@ def create_app(db_path: Path):
     @app.get("/api/remote-sources")
     def list_remote_sources(project: str | None = None):
         return remote_sources_payload(store, project)
+
+    @app.post("/api/remote-source")
+    async def save_remote_source(payload: dict):
+        return save_remote_source_payload(store, payload)
 
     @app.get("/api/lineage")
     def get_lineage(project: str | None = None):

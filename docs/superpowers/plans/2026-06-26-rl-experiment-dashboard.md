@@ -506,6 +506,20 @@
 - [x] **Step 3: Render a Create / Update Project form in Project Configs and refresh after save.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 34: Dashboard Remote Source Creation
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/api.py`
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_api.py`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing tests for remote source save payloads and dashboard remote source form hooks.**
+- [x] **Step 2: Add `save_remote_source_payload()` and `/api/remote-source` POST route.**
+- [x] **Step 3: Render a Create / Update Remote Source form and refresh sources after save.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

@@ -530,50 +530,134 @@
       }
 
       function renderRemoteSources(sources) {
-        if (sources.length === 0) {
-          remoteSources.innerHTML = `<div class="empty">No remote sources configured.</div>`;
-          return;
-        }
+        const sourceRows =
+          sources.length === 0
+            ? `<div class="empty">No remote sources configured.</div>`
+            : `<table aria-label="Remote sync sources">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Project</th>
+                    <th>Host</th>
+                    <th>Method</th>
+                    <th>Remote Root</th>
+                    <th>Include Patterns</th>
+                    <th>Exclude Patterns</th>
+                    <th>Last Sync</th>
+                    <th>Local Path</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${sources
+                    .map((source) => {
+                      const latest = source.latest_sync || {};
+                      const lastSync = latest.status
+                        ? `${escapeHtml(latest.status)}<br><span class="muted">${formatTimestamp(latest.created_at)}</span>`
+                        : '<span class="muted">never</span>';
+                      return `
+                        <tr>
+                          <td>${escapeHtml(source.name)}</td>
+                          <td>${escapeHtml(source.project || '')}</td>
+                          <td>${escapeHtml(source.user || '')}@${escapeHtml(source.host || '')}:${escapeHtml(source.port || '')}</td>
+                          <td>${escapeHtml(source.method || '')}</td>
+                          <td>${escapeHtml(source.remote_log_root || '')}</td>
+                          <td>${escapeHtml(joinList(source.include_patterns))}</td>
+                          <td>${escapeHtml(joinList(source.exclude_patterns))}</td>
+                          <td>${lastSync}${latest.message ? `<br>${escapeHtml(latest.message)}` : ''}</td>
+                          <td>${escapeHtml(latest.local_path || '')}</td>
+                        </tr>
+                      `;
+                    })
+                    .join('')}
+                </tbody>
+              </table>`;
         remoteSources.innerHTML = `
-          <table aria-label="Remote sync sources">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Project</th>
-                <th>Host</th>
-                <th>Method</th>
-                <th>Remote Root</th>
-                <th>Include Patterns</th>
-                <th>Exclude Patterns</th>
-                <th>Last Sync</th>
-                <th>Local Path</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sources
-                .map((source) => {
-                  const latest = source.latest_sync || {};
-                  const lastSync = latest.status
-                    ? `${escapeHtml(latest.status)}<br><span class="muted">${formatTimestamp(latest.created_at)}</span>`
-                    : '<span class="muted">never</span>';
-                  return `
-                    <tr>
-                      <td>${escapeHtml(source.name)}</td>
-                      <td>${escapeHtml(source.project || '')}</td>
-                      <td>${escapeHtml(source.user || '')}@${escapeHtml(source.host || '')}:${escapeHtml(source.port || '')}</td>
-                      <td>${escapeHtml(source.method || '')}</td>
-                      <td>${escapeHtml(source.remote_log_root || '')}</td>
-                      <td>${escapeHtml(joinList(source.include_patterns))}</td>
-                      <td>${escapeHtml(joinList(source.exclude_patterns))}</td>
-                      <td>${lastSync}${latest.message ? `<br>${escapeHtml(latest.message)}` : ''}</td>
-                      <td>${escapeHtml(latest.local_path || '')}</td>
-                    </tr>
-                  `;
-                })
-                .join('')}
-            </tbody>
-          </table>
+          ${remoteSourceForm(sources[0] || {})}
+          ${sourceRows}
         `;
+        bindRemoteSourceForm();
+      }
+
+      function remoteSourceForm(source) {
+        return `
+          <h3 class="subhead">Create / Update Remote Source</h3>
+          <form id="remote-source-form">
+            <div class="form-row">
+              <label>
+                <div class="label">Name</div>
+                <input name="name" value="${escapeHtml(source.name || '')}" required />
+              </label>
+              <label>
+                <div class="label">Project</div>
+                <input name="project" value="${escapeHtml(source.project || '')}" required />
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Host</div>
+                <input name="host" value="${escapeHtml(source.host || '')}" required />
+              </label>
+              <label>
+                <div class="label">User</div>
+                <input name="user" value="${escapeHtml(source.user || '')}" required />
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <div class="label">Port</div>
+                <input name="port" value="${escapeHtml(source.port || 22)}" />
+              </label>
+              <label>
+                <div class="label">Method</div>
+                <select name="method">
+                  ${option('rsync', source.method || 'rsync')}
+                  ${option('scp', source.method)}
+                  ${option('ssh-tar', source.method)}
+                </select>
+              </label>
+            </div>
+            <label>
+              <div class="label">Remote log root</div>
+              <input name="remote_log_root" value="${escapeHtml(source.remote_log_root || '')}" required />
+            </label>
+            <div class="form-row">
+              <label>
+                <div class="label">Include Patterns</div>
+                <input name="include_patterns" value="${escapeHtml(joinList(source.include_patterns))}" />
+              </label>
+              <label>
+                <div class="label">Exclude Patterns</div>
+                <input name="exclude_patterns" value="${escapeHtml(joinList(source.exclude_patterns))}" />
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit">Save Remote Source</button>
+            </div>
+          </form>
+        `;
+      }
+
+      function bindRemoteSourceForm() {
+        const form = document.getElementById('remote-source-form');
+        if (!form) return;
+        form.addEventListener('submit', saveRemoteSource);
+      }
+
+      async function saveRemoteSource(event) {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        await postJson('/api/remote-source', {
+          name: form.get('name'),
+          project: form.get('project'),
+          host: form.get('host'),
+          user: form.get('user'),
+          port: form.get('port'),
+          remote_log_root: form.get('remote_log_root'),
+          method: form.get('method'),
+          include_patterns: splitTags(form.get('include_patterns')),
+          exclude_patterns: splitTags(form.get('exclude_patterns')),
+        });
+        await loadRemoteSources();
       }
 
       async function loadLineageOverview() {

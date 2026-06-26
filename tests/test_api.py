@@ -15,6 +15,7 @@ from rl_exp_dashboard.api import (
     save_checkpoint_review_payload,
     save_lineage_edge_payload,
     save_project_payload,
+    save_remote_source_payload,
     save_run_observation_payload,
     timeline_payload,
 )
@@ -395,6 +396,38 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["sources"][0]["exclude_patterns"], ["videos/***"])
         self.assertEqual(payload["sources"][0]["latest_sync"]["status"], "dry-run")
         self.assertEqual(payload["sources"][0]["latest_sync"]["command"], ["rsync", "--dry-run"])
+
+    def test_save_remote_source_payload_persists_dashboard_form_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = DashboardStore(Path(tmp) / "dashboard.sqlite3")
+            store.initialize()
+            store.upsert_project("project", Path(tmp) / "cache")
+
+            saved = save_remote_source_payload(
+                store,
+                {
+                    "name": "x-server",
+                    "project": "project",
+                    "host": "1858d9aa66b16579.natapp.cc",
+                    "user": "eai",
+                    "port": "12188",
+                    "remote_log_root": "/home/eai/workspace/unitree_rl_mjlab/logs/rsl_rl",
+                    "method": "scp",
+                    "include_patterns": "params/***, events.out.tfevents.*",
+                    "exclude_patterns": ["videos/***", "wandb/***"],
+                },
+            )
+            payload = remote_sources_payload(store, "project")
+
+        source = payload["sources"][0]
+        self.assertEqual(saved["source"]["name"], "x-server")
+        self.assertEqual(source["host"], "1858d9aa66b16579.natapp.cc")
+        self.assertEqual(source["user"], "eai")
+        self.assertEqual(source["port"], 12188)
+        self.assertEqual(source["remote_log_root"], "/home/eai/workspace/unitree_rl_mjlab/logs/rsl_rl")
+        self.assertEqual(source["method"], "scp")
+        self.assertEqual(source["include_patterns"], ["params/***", "events.out.tfevents.*"])
+        self.assertEqual(source["exclude_patterns"], ["videos/***", "wandb/***"])
 
     def test_projects_payload_includes_project_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:
