@@ -12,7 +12,7 @@ from .structured_loader import load_structured_file
 _CHECKPOINT_RE = re.compile(r"model_(\d+)\.pt$")
 _VIDEO_SUFFIXES = {".mp4", ".mov", ".webm", ".avi", ".mkv"}
 _ARTIFACT_SUFFIXES = {".onnx", ".jit", ".pt2"}
-_PARAM_SUFFIXES = {".yaml", ".yml", ".json"}
+_PARAM_SUFFIXES = {".yaml", ".yml", ".json", ".toml"}
 _PARENT_RUN_KEYS = {"load_run", "resume_run", "parent_run", "parent_run_id"}
 _PARENT_CHECKPOINT_KEYS = {"load_checkpoint", "resume_checkpoint", "parent_checkpoint"}
 _GIT_CONTAINER_KEYS = {"git", "git_info", "git_metadata"}

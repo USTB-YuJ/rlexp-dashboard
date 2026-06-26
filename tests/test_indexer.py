@@ -32,6 +32,31 @@ class LocalRunIndexerTests(unittest.TestCase):
         self.assertEqual(data["env"]["rewards"]["alive"]["weight"], 1.0)
         self.assertEqual(data["enabled"], True)
 
+    def test_load_structured_file_reads_toml_params(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "agent.toml"
+            path.write_text(
+                "\n".join(
+                    [
+                        "[agent.algorithm]",
+                        "entropy_coef = 0.005",
+                        "use_amp = true",
+                        "tags = [\"baseline\", \"parkour\"]",
+                        "",
+                        "[agent.runner]",
+                        "load_run = \"baseline\"",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            data = load_structured_file(path)
+
+        self.assertEqual(data["agent"]["algorithm"]["entropy_coef"], 0.005)
+        self.assertEqual(data["agent"]["algorithm"]["use_amp"], True)
+        self.assertEqual(data["agent"]["algorithm"]["tags"], ["baseline", "parkour"])
+        self.assertEqual(data["agent"]["runner"]["load_run"], "baseline")
+
     def test_discover_runs_indexes_params_checkpoints_events_and_videos(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -48,6 +73,10 @@ class LocalRunIndexerTests(unittest.TestCase):
                 "agent:\n  algorithm:\n    entropy_coef: 0.005\n",
                 encoding="utf-8",
             )
+            (params_dir / "runner.toml").write_text(
+                "[runner]\nexperiment_name = \"parkour\"\nmax_iterations = 1000\n",
+                encoding="utf-8",
+            )
             (run_dir / "events.out.tfevents.fake").write_text("event", encoding="utf-8")
             (run_dir / "model_100.pt").write_bytes(b"old")
             (run_dir / "model_250.pt").write_bytes(b"new")
@@ -62,6 +91,8 @@ class LocalRunIndexerTests(unittest.TestCase):
         self.assertEqual(run.name, "2026-06-25_15-19-19")
         self.assertEqual(run.params["env"]["scene"]["num_envs"], 2048)
         self.assertEqual(run.params["agent"]["algorithm"]["entropy_coef"], 0.005)
+        self.assertEqual(run.params["runner"]["experiment_name"], "parkour")
+        self.assertEqual(run.params["runner"]["max_iterations"], 1000)
         self.assertEqual([checkpoint.iteration for checkpoint in run.checkpoints], [100, 250])
         self.assertEqual(run.checkpoints[-1].path.name, "model_250.pt")
         self.assertTrue(run.checkpoints[-1].is_latest)

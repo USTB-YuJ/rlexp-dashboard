@@ -281,6 +281,18 @@
 - [x] **Step 3: Wire controls to the indexed run list without changing the existing API.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 18: TOML Param File Support
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/structured_loader.py`
+- Modify: `src/rl_exp_dashboard/indexer.py`
+- Modify: `tests/test_indexer.py`
+
+- [x] **Step 1: Write failing tests for loading TOML params and discovering `.toml` files during run indexing.**
+- [x] **Step 2: Add TOML loading via `tomllib`/`tomli` when available with a simple fallback parser for common scalar/table configs.**
+- [x] **Step 3: Include `.toml` in local run param discovery.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
