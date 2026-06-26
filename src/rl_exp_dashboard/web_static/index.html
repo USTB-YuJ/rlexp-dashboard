@@ -337,6 +337,16 @@
 
       <section class="wide-section">
         <div class="section-head">
+          <h2>Experiment Timeline</h2>
+          <button type="button" id="refresh-timeline">Refresh</button>
+        </div>
+        <div id="timeline-overview" class="detail">
+          <div class="empty">Loading timeline...</div>
+        </div>
+      </section>
+
+      <section class="wide-section">
+        <div class="section-head">
           <h2>Compare Runs</h2>
           <span class="muted">Config Diffs and Metric Deltas</span>
         </div>
@@ -375,11 +385,13 @@
       const projectConfigs = document.getElementById('project-configs');
       const remoteSources = document.getElementById('remote-sources');
       const lineageOverview = document.getElementById('lineage-overview');
+      const timelineOverview = document.getElementById('timeline-overview');
       let indexedRuns = [];
       document.getElementById('refresh-runs').addEventListener('click', loadRuns);
       document.getElementById('refresh-project-configs').addEventListener('click', loadProjectConfigs);
       document.getElementById('refresh-remote-sources').addEventListener('click', loadRemoteSources);
       document.getElementById('refresh-lineage').addEventListener('click', loadLineageOverview);
+      document.getElementById('refresh-timeline').addEventListener('click', loadTimeline);
       document.getElementById('compare-runs').addEventListener('click', loadCompareResult);
       runSearch.addEventListener('input', renderFilteredRuns);
       projectFilter.addEventListener('change', renderFilteredRuns);
@@ -609,6 +621,63 @@
           });
           await loadLineageOverview();
         });
+      }
+
+      async function loadTimeline() {
+        timelineOverview.innerHTML = `<div class="empty">Loading timeline...</div>`;
+        const response = await fetch('/api/timeline');
+        const payload = await response.json();
+        renderTimeline(payload.entries || []);
+      }
+
+      function renderTimeline(entries) {
+        if (entries.length === 0) {
+          timelineOverview.innerHTML = `<div class="empty">No indexed runs available for timeline.</div>`;
+          return;
+        }
+        timelineOverview.innerHTML = `
+          <table aria-label="Experiment timeline">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Run</th>
+                <th>Parent</th>
+                <th>Intent</th>
+                <th>Review</th>
+                <th>Reward</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries
+                .map(
+                  (entry) => `
+                    <tr data-run-id="${escapeHtml(entry.run_id)}">
+                      <td>${formatTimestamp(entry.modified_time)}</td>
+                      <td>${escapeHtml(entry.run_id)}</td>
+                      <td>${escapeHtml(formatTimelineParent(entry))}</td>
+                      <td>${escapeHtml(entry.intended_change || '')}</td>
+                      <td>${escapeHtml(formatTimelineReview(entry))}</td>
+                      <td>${formatNumber(keyMetricValue(entry, 'Train/mean_reward'))}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+        for (const row of timelineOverview.querySelectorAll('tr[data-run-id]')) {
+          row.addEventListener('click', () => loadRunDetail(row.dataset.runId));
+        }
+      }
+
+      function formatTimelineParent(entry) {
+        if (!entry.parent_run_id) return '';
+        return entry.parent_checkpoint ? `${entry.parent_run_id} @ ${entry.parent_checkpoint}` : entry.parent_run_id;
+      }
+
+      function formatTimelineReview(entry) {
+        const verdict = entry.review_verdict || 'unreviewed';
+        return entry.summary ? `${verdict}: ${entry.summary}` : verdict;
       }
 
       function renderRuns(runs) {
@@ -1285,6 +1354,9 @@
       });
       loadLineageOverview().catch((error) => {
         lineageOverview.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+      });
+      loadTimeline().catch((error) => {
+        timelineOverview.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
       });
     </script>
   </body>

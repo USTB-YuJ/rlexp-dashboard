@@ -15,6 +15,7 @@ from rl_exp_dashboard.api import (
     save_checkpoint_review_payload,
     save_lineage_edge_payload,
     save_run_observation_payload,
+    timeline_payload,
 )
 from rl_exp_dashboard.models import CheckpointRecord, LineageEdge, MetricSeries, MetricSummary, RunRecord
 from rl_exp_dashboard.storage import DashboardStore
@@ -98,6 +99,35 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(parent["child_count"], 1)
         self.assertEqual(child["key_metrics"]["Train/mean_reward"]["last_value"], 2.0)
         self.assertEqual(child["key_metrics"]["Train/mean_reward"]["last_step"], 10)
+
+    def test_timeline_payload_returns_chronological_experiment_story(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = self._store_with_parent_and_child(Path(tmp))
+            store.upsert_project(
+                "project",
+                Path(tmp) / "cache",
+                preferred_metrics=["Train/mean_reward"],
+            )
+            store.upsert_run_observation(
+                run_id="group/child",
+                verdict="bad",
+                summary="Backward walking in play.",
+                tags=["backward-walk"],
+                recommended_checkpoint="model_20.pt",
+            )
+
+            payload = timeline_payload(store, "project")
+
+        self.assertEqual([entry["run_id"] for entry in payload["entries"]], ["group/parent", "group/child"])
+        child = payload["entries"][1]
+        self.assertEqual(child["parent_run_id"], "group/parent")
+        self.assertEqual(child["parent_checkpoint"], "model_10.pt")
+        self.assertEqual(child["relationship"], "finetune")
+        self.assertEqual(child["intended_change"], "lower entropy")
+        self.assertEqual(child["review_verdict"], "bad")
+        self.assertEqual(child["summary"], "Backward walking in play.")
+        self.assertEqual(child["tags"], ["backward-walk"])
+        self.assertEqual(child["key_metrics"]["Train/mean_reward"]["last_value"], 2.0)
 
     def test_metric_series_payload_returns_sampled_points(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -25,6 +25,21 @@ def runs_payload(store: DashboardStore, project: str | None = None) -> Dict[str,
     }
 
 
+def timeline_payload(store: DashboardStore, project: str | None = None) -> Dict[str, Any]:
+    projects_by_name = {item["name"]: item for item in store.list_projects()}
+    runs = sorted(
+        store.list_runs(project),
+        key=lambda run: (float(run.get("modified_time") or 0.0), run["run_id"]),
+    )
+    return {
+        "project": project,
+        "entries": [
+            _timeline_entry(store, run, projects_by_name.get(run["project_name"]))
+            for run in runs
+        ],
+    }
+
+
 def metric_summaries_payload(store: DashboardStore, run_id: str) -> Dict[str, Any]:
     return {"run_id": run_id, "metrics": store.list_metric_summaries(run_id)}
 
@@ -199,6 +214,33 @@ def _run_table_row(store: DashboardStore, run: Dict[str, Any], project: Dict[str
     return row
 
 
+def _timeline_entry(store: DashboardStore, run: Dict[str, Any], project: Dict[str, Any] | None) -> Dict[str, Any]:
+    run_id = run["run_id"]
+    observation = store.get_run_observation(run_id) or {}
+    parent_lineage = store.list_lineage(run_id)
+    parent_edge = parent_lineage[0] if parent_lineage else {}
+    return {
+        "run_id": run_id,
+        "project_name": run["project_name"],
+        "name": run["name"],
+        "group": run["group"],
+        "modified_time": run["modified_time"],
+        "latest_checkpoint": run["latest_checkpoint"],
+        "parent_run_id": parent_edge.get("parent_run_id") or run.get("parent_run_id"),
+        "parent_checkpoint": parent_edge.get("parent_checkpoint") or run.get("parent_checkpoint"),
+        "relationship": parent_edge.get("relationship", ""),
+        "intended_change": parent_edge.get("intended_change", ""),
+        "review_verdict": observation.get("verdict", "unreviewed"),
+        "summary": observation.get("summary", ""),
+        "tags": observation.get("tags", []),
+        "recommended_checkpoint": observation.get("recommended_checkpoint"),
+        "key_metrics": _run_table_metrics(
+            store.list_metric_summaries(run_id),
+            project.get("preferred_metrics", []) if project else [],
+        ),
+    }
+
+
 def _run_table_metrics(metrics: list[Dict[str, Any]], preferred_tags: list[str]) -> Dict[str, Dict[str, Any]]:
     metrics_by_tag = {metric["tag"]: metric for metric in metrics}
     ordered_tags = list(preferred_tags) or list(_DEFAULT_RUN_TABLE_METRICS)
@@ -270,6 +312,10 @@ def create_app(db_path: Path):
     @app.get("/api/lineage")
     def get_lineage(project: str | None = None):
         return lineage_overview_payload(store, project)
+
+    @app.get("/api/timeline")
+    def get_timeline(project: str | None = None):
+        return timeline_payload(store, project)
 
     @app.post("/api/lineage-edge")
     async def save_lineage_edge(payload: dict):
