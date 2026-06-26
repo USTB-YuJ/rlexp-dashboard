@@ -846,6 +846,9 @@
           <h3 class="subhead">Git Metadata</h3>
           ${gitPanel(run.git || {})}
 
+          <h3 class="subhead">Params Browser</h3>
+          ${paramsTable(run.params || {})}
+
           <h3 class="subhead">Manual Observation</h3>
           ${observationPanel(run.run_id, payload.observation)}
 
@@ -962,6 +965,44 @@
             ${field('Diff', git.diff || '')}
           </div>
         `;
+      }
+
+      function paramsTable(params) {
+        const rows = flattenParams(params);
+        if (rows.length === 0) return `<div class="empty">No params indexed for this run.</div>`;
+        return `
+          <table>
+            <thead><tr><th>Path</th><th>Value</th></tr></thead>
+            <tbody>
+              ${rows
+                .map(
+                  ([path, value]) => `
+                    <tr>
+                      <td>${escapeHtml(path)}</td>
+                      <td>${escapeHtml(formatValue(value))}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function flattenParams(value, prefix = '') {
+        if (value === null || value === undefined) return prefix ? [[prefix, value]] : [];
+        if (Array.isArray(value)) {
+          if (value.some((item) => item && typeof item === 'object')) {
+            return value.flatMap((item, index) => flattenParams(item, `${prefix}[${index}]`));
+          }
+          return prefix ? [[prefix, value]] : [];
+        }
+        if (typeof value === 'object') {
+          return Object.keys(value)
+            .sort((a, b) => a.localeCompare(b))
+            .flatMap((key) => flattenParams(value[key], prefix ? `${prefix}.${key}` : key));
+        }
+        return prefix ? [[prefix, value]] : [];
       }
 
       function metricTable(metrics) {

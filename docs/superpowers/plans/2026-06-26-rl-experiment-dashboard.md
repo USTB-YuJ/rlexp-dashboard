@@ -452,6 +452,18 @@
 - [x] **Step 4: Render an Experiment Timeline panel in the bundled dashboard.**
 - [x] **Step 5: Run targeted and full verification, then commit.**
 
+## Task 30: Run Detail Params Browser
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for a Params Browser section and flatten helper.**
+- [x] **Step 2: Add a Params Browser section to run detail.**
+- [x] **Step 3: Render flattened dotted param paths and values from `run.params`.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.
