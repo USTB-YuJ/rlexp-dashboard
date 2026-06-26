@@ -14,9 +14,14 @@ class DashboardStoreTests(unittest.TestCase):
             run_path = Path(tmp) / "logs" / "group" / "child"
             run_path.mkdir(parents=True)
             checkpoint_path = run_path / "model_100.pt"
+            env_config_path = run_path / "params" / "env.yaml"
+            agent_config_path = run_path / "params" / "agent.yaml"
             video_path = run_path / "videos" / "play" / "rl-video-step-0.mp4"
             artifact_path = run_path / "exports" / "policy.onnx"
             checkpoint_path.write_bytes(b"checkpoint")
+            env_config_path.parent.mkdir(parents=True)
+            env_config_path.write_text("env:\n  rewards: {}\n", encoding="utf-8")
+            agent_config_path.write_text("agent:\n  algorithm: {}\n", encoding="utf-8")
             video_path.parent.mkdir(parents=True)
             artifact_path.parent.mkdir(parents=True)
             video_path.write_bytes(b"video")
@@ -52,6 +57,7 @@ class DashboardStoreTests(unittest.TestCase):
                         "branch": "rl-dashboard",
                         "dirty": True,
                     },
+                    param_files=[env_config_path, agent_config_path],
                     checkpoints=[
                         CheckpointRecord(
                             path=checkpoint_path,
@@ -106,6 +112,7 @@ class DashboardStoreTests(unittest.TestCase):
             metrics = store.list_metric_summaries("group/child")
             series = store.list_metric_series("group/child")
             artifacts = store.list_run_artifacts("group/child")
+            config_files = store.list_run_config_files("group/child")
             lineage = store.list_lineage("group/child")
 
         self.assertEqual(child["latest_checkpoint"], "model_100.pt")
@@ -116,6 +123,10 @@ class DashboardStoreTests(unittest.TestCase):
         self.assertEqual(child["git"]["commit"], "abc123")
         self.assertEqual(child["git"]["branch"], "rl-dashboard")
         self.assertEqual(child["git"]["dirty"], True)
+        self.assertEqual([Path(item["path"]).name for item in config_files], ["agent.yaml", "env.yaml"])
+        self.assertEqual([item["relative_path"] for item in config_files], ["params/agent.yaml", "params/env.yaml"])
+        self.assertEqual(config_files[0]["suffix"], ".yaml")
+        self.assertGreater(config_files[0]["size_bytes"], 0)
         self.assertEqual(checkpoints[0]["iteration"], 100)
         self.assertEqual(checkpoints[0]["is_latest"], True)
         self.assertEqual(metrics[0]["tag"], "Train/mean_reward")

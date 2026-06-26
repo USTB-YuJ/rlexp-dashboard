@@ -97,6 +97,7 @@ class LocalRunIndexerTests(unittest.TestCase):
         self.assertEqual(run.params["agent"]["algorithm"]["entropy_coef"], 0.005)
         self.assertEqual(run.params["runner"]["experiment_name"], "parkour")
         self.assertEqual(run.params["runner"]["max_iterations"], 1000)
+        self.assertEqual([path.name for path in run.param_files], ["agent.yaml", "env.yaml", "runner.toml"])
         self.assertEqual([checkpoint.iteration for checkpoint in run.checkpoints], [100, 250])
         self.assertEqual(run.checkpoints[-1].path.name, "model_250.pt")
         self.assertTrue(run.checkpoints[-1].is_latest)

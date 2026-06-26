@@ -210,6 +210,7 @@ class ApiPayloadTests(unittest.TestCase):
         self.assertEqual(payload["checkpoint_reviews"][0]["checkpoint"], "model_20.pt")
         self.assertEqual([artifact["kind"] for artifact in payload["artifacts"]], ["artifact", "video"])
         self.assertEqual([Path(artifact["path"]).name for artifact in payload["artifacts"]], ["policy.onnx", "model_20.mp4"])
+        self.assertEqual([item["relative_path"] for item in payload["config_files"]], ["params/agent.yaml", "params/env.yaml"])
 
     def test_run_detail_payload_includes_reward_and_termination_config_summaries(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -610,10 +611,15 @@ class ApiPayloadTests(unittest.TestCase):
         store.upsert_project("project", tmp_path / "cache")
         child_video = tmp_path / "child" / "videos" / "play" / "model_20.mp4"
         child_artifact = tmp_path / "child" / "exports" / "policy.onnx"
+        child_env_config = tmp_path / "child" / "params" / "env.yaml"
+        child_agent_config = tmp_path / "child" / "params" / "agent.yaml"
         child_video.parent.mkdir(parents=True)
         child_artifact.parent.mkdir(parents=True)
+        child_env_config.parent.mkdir(parents=True)
         child_video.write_bytes(b"video")
         child_artifact.write_bytes(b"onnx")
+        child_env_config.write_text("env:\n  rewards: {}\n", encoding="utf-8")
+        child_agent_config.write_text("agent:\n  algorithm: {}\n", encoding="utf-8")
         store.upsert_run(
             "project",
             RunRecord(
@@ -657,6 +663,7 @@ class ApiPayloadTests(unittest.TestCase):
                 task_name="Unitree-G1-Depth-Parkour",
                 algorithm_name="rsl_rl_ppo",
                 params={"agent": {"algorithm": {"entropy_coef": 0.005}}},
+                param_files=[child_env_config, child_agent_config],
                 checkpoints=[
                     CheckpointRecord(
                         path=tmp_path / "child" / "model_20.pt",

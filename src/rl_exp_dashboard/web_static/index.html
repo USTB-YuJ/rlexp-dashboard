@@ -1398,6 +1398,9 @@
           <h3 class="subhead">Termination Summary</h3>
           ${terminationSummaryTable(payload.config_summary?.terminations || [])}
 
+          <h3 class="subhead">Config Files</h3>
+          ${configFilesTable(payload.config_files || [])}
+
           <h3 class="subhead">Params Browser</h3>
           ${paramsTable(run.params || {})}
 
@@ -1589,6 +1592,30 @@
                       <td>${escapeHtml(formatValue(termination.time_out))}</td>
                       <td>${escapeHtml(formatValue(termination.params || {}))}</td>
                       <td>${escapeHtml(termination.path || '')}</td>
+                    </tr>
+                  `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function configFilesTable(configFiles) {
+        if (!configFiles || configFiles.length === 0) return `<div class="empty">No config files indexed for this run.</div>`;
+        return `
+          <table>
+            <thead><tr><th>File</th><th>Type</th><th>Size</th><th>Modified</th><th>Path</th></tr></thead>
+            <tbody>
+              ${configFiles
+                .map(
+                  (configFile) => `
+                    <tr>
+                      <td>${escapeHtml(configFile.relative_path || configFile.name || '')}</td>
+                      <td>${escapeHtml(configFile.suffix || '')}</td>
+                      <td>${formatBytes(configFile.size_bytes)}</td>
+                      <td>${formatTimestamp(configFile.modified_time)}</td>
+                      <td>${escapeHtml(configFile.path || '')}</td>
                     </tr>
                   `,
                 )

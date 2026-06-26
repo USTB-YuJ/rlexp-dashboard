@@ -90,6 +90,17 @@ class DashboardStore:
                     primary key (run_id, path)
                 );
 
+                create table if not exists run_config_files (
+                    run_id text not null references runs(run_id),
+                    path text not null,
+                    relative_path text not null,
+                    name text not null,
+                    suffix text not null,
+                    size_bytes integer not null,
+                    modified_time real not null,
+                    primary key (run_id, path)
+                );
+
                 create table if not exists metric_summaries (
                     run_id text not null references runs(run_id),
                     tag text not null,
@@ -415,6 +426,27 @@ class DashboardStore:
                     for artifact in _run_artifacts(run)
                 ],
             )
+            conn.execute("delete from run_config_files where run_id = ?", (run.run_id,))
+            conn.executemany(
+                """
+                insert into run_config_files (
+                    run_id, path, relative_path, name, suffix, size_bytes, modified_time
+                )
+                values (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        run.run_id,
+                        config_file["path"],
+                        config_file["relative_path"],
+                        config_file["name"],
+                        config_file["suffix"],
+                        config_file["size_bytes"],
+                        config_file["modified_time"],
+                    )
+                    for config_file in _run_config_files(run)
+                ],
+            )
             conn.execute("delete from metric_summaries where run_id = ?", (run.run_id,))
             conn.executemany(
                 """
@@ -552,6 +584,25 @@ class DashboardStore:
                 "run_id": row["run_id"],
                 "kind": row["kind"],
                 "path": row["path"],
+                "name": row["name"],
+                "suffix": row["suffix"],
+                "size_bytes": row["size_bytes"],
+                "modified_time": row["modified_time"],
+            }
+            for row in rows
+        ]
+
+    def list_run_config_files(self, run_id: str) -> List[Dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "select * from run_config_files where run_id = ? order by relative_path",
+                (run_id,),
+            ).fetchall()
+        return [
+            {
+                "run_id": row["run_id"],
+                "path": row["path"],
+                "relative_path": row["relative_path"],
                 "name": row["name"],
                 "suffix": row["suffix"],
                 "size_bytes": row["size_bytes"],
@@ -813,6 +864,20 @@ def _run_artifacts(run: RunRecord) -> List[Dict[str, Any]]:
         for path in paths:
             records.append(_artifact_record(Path(path), kind))
     return records
+
+
+def _run_config_files(run: RunRecord) -> List[Dict[str, Any]]:
+    return [_config_file_record(Path(path), Path(run.path)) for path in sorted(run.param_files)]
+
+
+def _config_file_record(path: Path, run_path: Path) -> Dict[str, Any]:
+    try:
+        relative_path = path.relative_to(run_path).as_posix()
+    except ValueError:
+        relative_path = path.name
+    record = _artifact_record(path, "config")
+    record["relative_path"] = relative_path
+    return record
 
 
 def _artifact_record(path: Path, kind: str) -> Dict[str, Any]:
