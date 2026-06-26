@@ -654,6 +654,18 @@
 - [x] **Step 3: Use `start_time` in timeline payload ordering and dashboard table/detail/timeline display.**
 - [x] **Step 4: Run targeted and full verification, then commit.**
 
+## Task 44: Bundled Lineage Graph Visualization
+
+**Files:**
+- Modify: `src/rl_exp_dashboard/web_static/index.html`
+- Modify: `tests/test_static_dashboard.py`
+- Modify: `docs/superpowers/plans/2026-06-26-rl-experiment-dashboard.md`
+
+- [x] **Step 1: Write failing static dashboard tests for a lineage SVG graph, render helper, and clickable run nodes.**
+- [x] **Step 2: Render a compact bundled SVG graph from `/api/lineage` nodes and edges without new frontend dependencies.**
+- [x] **Step 3: Wire graph nodes to run detail loading and keep the existing edge table/manual link form.**
+- [x] **Step 4: Run targeted and full verification, then commit.**
+
 ## Later Milestones
 
 - React/Vite frontend.

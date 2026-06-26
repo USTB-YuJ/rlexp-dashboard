@@ -203,6 +203,43 @@
         background: #000;
         border-radius: 4px;
       }
+      .lineage-graph-panel {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fbfcfe;
+        overflow-x: auto;
+      }
+      .lineage-graph {
+        display: block;
+        min-width: 720px;
+        width: 100%;
+      }
+      .lineage-edge {
+        fill: none;
+        stroke: #7d8da8;
+        stroke-width: 1.6;
+      }
+      .lineage-node {
+        cursor: pointer;
+      }
+      .lineage-node rect {
+        fill: #ffffff;
+        stroke: var(--accent);
+        stroke-width: 1.4;
+      }
+      .lineage-node:hover rect,
+      .lineage-node:focus rect {
+        fill: var(--accent-soft);
+      }
+      .lineage-node-title {
+        fill: var(--text);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .lineage-node-meta {
+        fill: var(--muted);
+        font-size: 10px;
+      }
       @media (max-width: 920px) {
         main {
           grid-template-columns: 1fr;
@@ -808,12 +845,126 @@
             ${field('Runs', nodes.length)}
             ${field('Lineage Links', edges.length)}
           </div>
+          <h3 class="subhead">Lineage Graph</h3>
+          ${renderLineageGraph(nodes, edges)}
           <h3 class="subhead">Edges</h3>
           ${edgeRows}
           <h3 class="subhead">Manual Lineage Link</h3>
           ${lineageLinkForm(nodes)}
         `;
+        bindLineageGraph();
         bindLineageEdgeForm();
+      }
+
+      function renderLineageGraph(nodes, edges) {
+        const nodeById = new Map(nodes.map((node) => [node.run_id, node]));
+        const validEdges = edges.filter((edge) => nodeById.has(edge.parent_run_id) && nodeById.has(edge.child_run_id));
+        const levelById = new Map(nodes.map((node) => [node.run_id, 0]));
+        for (let pass = 0; pass < nodes.length; pass += 1) {
+          for (const edge of validEdges) {
+            const parentLevel = levelById.get(edge.parent_run_id) || 0;
+            const childLevel = levelById.get(edge.child_run_id) || 0;
+            if (childLevel <= parentLevel) {
+              levelById.set(edge.child_run_id, parentLevel + 1);
+            }
+          }
+        }
+
+        const columns = new Map();
+        for (const node of nodes) {
+          const level = levelById.get(node.run_id) || 0;
+          if (!columns.has(level)) columns.set(level, []);
+          columns.get(level).push(node);
+        }
+        for (const column of columns.values()) {
+          column.sort((a, b) =>
+            Number(a.start_time || a.modified_time || 0) - Number(b.start_time || b.modified_time || 0) ||
+            a.run_id.localeCompare(b.run_id),
+          );
+        }
+
+        const nodeWidth = 180;
+        const nodeHeight = 46;
+        const columnGap = 70;
+        const rowGap = 32;
+        const padding = 24;
+        const positions = new Map();
+        const sortedLevels = [...columns.keys()].sort((a, b) => a - b);
+        sortedLevels.forEach((level) => {
+          const column = columns.get(level) || [];
+          column.forEach((node, row) => {
+            positions.set(node.run_id, {
+              x: padding + level * (nodeWidth + columnGap),
+              y: padding + row * (nodeHeight + rowGap),
+            });
+          });
+        });
+
+        const maxLevel = Math.max(0, ...sortedLevels);
+        const maxRows = Math.max(1, ...[...columns.values()].map((column) => column.length));
+        const width = padding * 2 + (maxLevel + 1) * nodeWidth + maxLevel * columnGap;
+        const height = padding * 2 + maxRows * nodeHeight + Math.max(0, maxRows - 1) * rowGap;
+        const paths = validEdges
+          .map((edge) => {
+            const parent = positions.get(edge.parent_run_id);
+            const child = positions.get(edge.child_run_id);
+            if (!parent || !child) return '';
+            const x1 = parent.x + nodeWidth;
+            const y1 = parent.y + nodeHeight / 2;
+            const x2 = child.x;
+            const y2 = child.y + nodeHeight / 2;
+            const mid = Math.max(24, (x2 - x1) / 2);
+            return `<path class="lineage-edge" d="M ${x1} ${y1} C ${x1 + mid} ${y1}, ${x2 - mid} ${y2}, ${x2} ${y2}" marker-end="url(#lineage-arrow)"></path>`;
+          })
+          .join('');
+        const nodeGroups = nodes
+          .map((node) => {
+            const pos = positions.get(node.run_id);
+            if (!pos) return '';
+            return `
+              <g class="lineage-node" data-run-id="${escapeHtml(node.run_id)}" role="button" tabindex="0" transform="translate(${pos.x}, ${pos.y})">
+                <rect width="${nodeWidth}" height="${nodeHeight}" rx="6"></rect>
+                <text class="lineage-node-title" x="10" y="18">${escapeHtml(shortRunLabel(node.run_id))}</text>
+                <text class="lineage-node-meta" x="10" y="34">${escapeHtml(lineageNodeMeta(node))}</text>
+              </g>
+            `;
+          })
+          .join('');
+        return `
+          <div class="lineage-graph-panel">
+            <svg id="lineage-graph" class="lineage-graph" viewBox="0 0 ${width} ${height}" role="img" aria-label="Run lineage graph">
+              <defs>
+                <marker id="lineage-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                  <path d="M 0 0 L 8 4 L 0 8 z" fill="#7d8da8"></path>
+                </marker>
+              </defs>
+              ${paths}
+              ${nodeGroups}
+            </svg>
+          </div>
+        `;
+      }
+
+      function bindLineageGraph() {
+        for (const node of lineageOverview.querySelectorAll('#lineage-graph [data-run-id]')) {
+          node.addEventListener('click', () => loadRunDetail(node.dataset.runId));
+          node.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              loadRunDetail(node.dataset.runId);
+            }
+          });
+        }
+      }
+
+      function shortRunLabel(runId) {
+        const text = String(runId || '');
+        if (text.length <= 30) return text;
+        return `${text.slice(0, 13)}...${text.slice(-14)}`;
+      }
+
+      function lineageNodeMeta(node) {
+        return [node.project_name, node.latest_checkpoint].filter(Boolean).join(' | ');
       }
 
       function lineageLinkForm(nodes) {
